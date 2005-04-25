@@ -48,11 +48,18 @@ use PPI::Util '_Document';
 
 use vars qw{$VERSION %CHECKS};
 BEGIN {
-	$VERSION = '0.01';
+	$VERSION = '0.02';
 
 	# Create the list of version checks
 	%CHECKS = (
-		any_our_variables => qv('5.006'),
+		# Included in 5.6. Broken until 5.8
+		_pragma_utf8         => qv('5.008'),
+
+		_any_our_variables   => qv('5.006'),
+		_perl_5006_pragmas   => qv('5.006'),
+		_any_binary_literals => qv('5.006'),
+		_magic_version       => qv('5.006'),
+		_any_attributes      => qv('5.006'),
 		);
 }
 
@@ -142,13 +149,56 @@ sub minimum_version {
 #####################################################################
 # Version Check Methods
 
-sub any_our_variables {
+sub _pragma_utf8 {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$_[1]->pragma eq 'ut8'
+	} );
+}
+
+sub _any_our_variables {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Variable')
 		and
 		$_[1]->type eq 'our'
 	} );
 }
+
+sub _perl_5006_pragmas {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$_[1]->pragma
+		and
+		$_[1]->pragma =~ /^(?:warnings|attributes|open|filetest)$/
+	} );
+}
+
+sub _any_binary_literals {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Number')
+		and
+		$_[1]->{_subtype}
+		and
+		$_[1]->{_subtype} eq 'binary'
+	} );	
+}
+
+sub _magic_version {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Magic')
+		and
+		$_[1]->content eq '$^V'
+	} );
+}
+
+sub _any_attributes {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Attribute')
+	} );
+}
+
 
 
 
@@ -173,7 +223,7 @@ sub _self {
 It's very early days, so this probably doesn't catch anywhere near enough
 syntax cases, and I personally don't know enough of them.
 
-B<However> it is esceedingly easy to add a new syntax check, so if you
+B<However> it is exceedingly easy to add a new syntax check, so if you
 find something this is missing, copy and paste one of the existing
 5 line checking functions, modify it to find what you want, and report it
 to rt.cpan.org, along with the version needed.

@@ -1,4 +1,7 @@
 Revision history for Perl extension Perl::MinimumVersion
 
-0.01  Wed Apr 20 2005
+0.02 Mon Apr 25 2005
+	- Added tests for attributes, utf8 and a few other pragmas
+
+0.01 Wed Apr 20 2005
 	- Created the initial implementation

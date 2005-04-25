@@ -2,7 +2,7 @@ use inc::Module::Install;
 
 name          ( 'Perl-MinimumVersion'        );
 abstract      ( 'Find the minimum required Perl version for any code' );
-author        ( 'Adam Kennedy<cpan@ali.as>'  );
+author        ( 'Adam Kennedy <cpan@ali.as>'  );
 version_from  ( 'lib/Perl/MinimumVersion.pm' );
 license       ( 'perl'                       );
 

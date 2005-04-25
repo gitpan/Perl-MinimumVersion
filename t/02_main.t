@@ -16,7 +16,7 @@ BEGIN {
 	}
 }
 
-use Test::More tests => 14;
+use Test::More tests => 18;
 use PPI;
 use Perl::MinimumVersion;
 
@@ -54,7 +54,7 @@ sub version_is {
 my $Version = version_is( <<'END_PERL', '5.004', 'Hello World matches expected version' );
 print "Hello World!\n";
 END_PERL
-is( $Version->any_our_variables, '', '->any_our_variables returns false' );
+is( $Version->_any_our_variables, '', '->_any_our_variables returns false' );
 
 # This first time, lets double check some assumptions
 isa_ok( $Version->Document, 'PPI::Document' );
@@ -66,7 +66,15 @@ isa_ok( $Version->minimum_version, 'version' );
 my $Version = version_is( <<'END_PERL', '5.006', '"our" matches expected version' );
 our $foo = 'bar';
 END_PERL
-is( $Version->any_our_variables, 1, '->any_our_variables returns true' );
+is( $Version->_any_our_variables, 1, '->_any_our_variables returns true' );
+}
+
+# Try with attributes
+{
+my $Version = version_is( <<'END_PERL', '5.006', '"attributes" matches expected version' );
+sub foo : attribute { 1 };
+END_PERL
+is( $Version->_any_attributes, 1, '->_any_attributes returns true' );
 }
 
 1;

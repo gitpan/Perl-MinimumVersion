@@ -56,7 +56,7 @@ BUGS
     It's very early days, so this probably doesn't catch anywhere near
     enough syntax cases, and I personally don't know enough of them.
 
-    However it is esceedingly easy to add a new syntax check, so if you find
+    However it is exceedingly easy to add a new syntax check, so if you find
     something this is missing, copy and paste one of the existing 5 line
     checking functions, modify it to find what you want, and report it to
     rt.cpan.org, along with the version needed.
