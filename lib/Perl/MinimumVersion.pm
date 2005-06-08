@@ -48,7 +48,7 @@ use PPI::Util '_Document';
 
 use vars qw{$VERSION %CHECKS};
 BEGIN {
-	$VERSION = '0.02';
+	$VERSION = '0.03';
 
 	# Create the list of version checks
 	%CHECKS = (

@@ -21,11 +21,11 @@ use PPI;
 use Perl::MinimumVersion;
 
 sub version_is {
-	my $Document = PPI::Document->new( shift );
+	my $Document = PPI::Document->new( \$_[0] );
 	isa_ok( $Document, 'PPI::Document' );
 	my $Version = Perl::MinimumVersion->new( $Document );
 	isa_ok( $Version, 'Perl::MinimumVersion' );
-	is( $Version->minimum_version, shift, $_[0] || 'Version matches expected' );
+	is( $Version->minimum_version, $_[1], $_[2] || 'Version matches expected' );
 	$Version;
 }
 

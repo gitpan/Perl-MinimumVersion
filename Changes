@@ -1,5 +1,8 @@
 Revision history for Perl extension Perl::MinimumVersion
 
+0.03 Wed May 25 2005
+	- Updated to handle API change at PPI 0.990
+
 0.02 Mon Apr 25 2005
 	- Added tests for attributes, utf8 and a few other pragmas
 

@@ -8,7 +8,7 @@ license       ( 'perl'                       );
 
 requires      ( 'perl'            => '5.005' );
 requires      ( 'List::Util'      => '1.10'  );
-requires      ( 'PPI'             => '0.905' );
+requires      ( 'PPI'             => '0.990' );
 requires      ( 'version'         => '0.42'  );
 
 build_requires( 'Test::More'      => '0.47'  );
