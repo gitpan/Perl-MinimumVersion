@@ -16,7 +16,7 @@ BEGIN {
 	}
 }
 
-use Test::More tests => 18;
+use Test::More tests => 24;
 use PPI;
 use Perl::MinimumVersion;
 
@@ -49,7 +49,6 @@ sub version_is {
 	}
 }
 
-
 {
 my $Version = version_is( <<'END_PERL', '5.004', 'Hello World matches expected version' );
 print "Hello World!\n";
@@ -75,6 +74,23 @@ my $Version = version_is( <<'END_PERL', '5.006', '"attributes" matches expected 
 sub foo : attribute { 1 };
 END_PERL
 is( $Version->_any_attributes, 1, '->_any_attributes returns true' );
+}
+
+# Check with a complex explicit
+{
+my $Version = version_is( <<'END_PERL', '5.008', 'explicit versions are detected' );
+sub foo : attribute { 1 };
+require 5.006;
+use 5.008;
+END_PERL
+}
+
+# Check with syntax higher than explicit
+{
+my $Version = version_is( <<'END_PERL', '5.006', 'Used syntax higher than low explicit' );
+sub foo : attribute { 1 };
+require 5.005;
+END_PERL
 }
 
 1;

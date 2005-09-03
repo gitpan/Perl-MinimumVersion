@@ -1,5 +1,14 @@
 Revision history for Perl extension Perl::MinimumVersion
 
+0.05 Sun Sep  4 2005
+	- Added support for explicit versions
+	- Added minimum_syntax_version method
+	- Added minimum_explicit_version method
+	- Updated PPI dependency to 1.000
+
+0.04 Tue May 31 2005
+	- Added another chunk of checking methods
+
 0.03 Wed May 25 2005
 	- Updated to handle API change at PPI 0.990
 

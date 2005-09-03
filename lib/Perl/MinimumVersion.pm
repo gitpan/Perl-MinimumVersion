@@ -40,26 +40,37 @@ covers it.
 =cut
 
 use strict;
-use UNIVERSAL 'isa';
 use version;
-use List::Util ();
-use PPI;
-use PPI::Util '_Document';
+use Carp         ();
+use List::Util   ();
+use PPI          ();
+use Params::Util '_INSTANCE';
+use PPI::Util    '_Document';
 
-use vars qw{$VERSION %CHECKS};
+use vars qw{$VERSION %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.03';
+	$VERSION = '0.05';
+	%MATCHES = ();
 
 	# Create the list of version checks
 	%CHECKS = (
-		# Included in 5.6. Broken until 5.8
-		_pragma_utf8         => qv('5.008'),
+		# Various small things
+		_bugfix_magic_errno   => qv('5.008.003'),
 
-		_any_our_variables   => qv('5.006'),
-		_perl_5006_pragmas   => qv('5.006'),
-		_any_binary_literals => qv('5.006'),
-		_magic_version       => qv('5.006'),
-		_any_attributes      => qv('5.006'),
+		# Included in 5.6. Broken until 5.8
+		_pragma_utf8          => qv('5.008'),
+
+		_perl_5006_pragmas    => qv('5.006'),
+		_any_our_variables    => qv('5.006'),
+		_any_binary_literals  => qv('5.006'),
+		_magic_version        => qv('5.006'),
+		_any_attributes       => qv('5.006'),
+
+		_perl_5005_pragmas    => qv('5.005'),
+		_perl_5005_modules    => qv('5.005'),
+		_any_tied_arrays      => qv('5.005'),
+		_any_quotelike_regexp => qv('5.005'),
+		_any_INIT_blocks      => qv('5.005'),
 		);
 }
 
@@ -119,17 +130,106 @@ sub Document { $_[0]->{Document} }
 The C<minimum_version> method is the primary method for finding the
 minimum perl version required based on C<all> factors in the document.
 
-Future versions of this package are expected to also add the methods
-C<minimum_syntax_version>, C<minimum_explicit_version> and
-C<minimum_module_version> to handle the three ways in which the version
-dependency can be added.
+At the present time, this is just syntax and explicit version checks,
+as L<Perl::Depends> is not yet completed.
 
 Returns a L<version> object, or C<undef> on error.
 
 =cut
 
 sub minimum_version {
-	my $self = _self(@_) or return undef;
+	my $self    = _self(@_) or return undef;
+
+	# We start with a default of 5.004
+	my $minimum = qv(5.004);
+
+	# Is the explicit version greater?
+	my $explicit = $self->minimum_explicit_version;
+	return undef unless defined $explicit;
+	if ( $explicit and $explicit > $minimum ) {
+		$minimum = $explicit;
+	}
+
+	# Is the syntax version greater?
+	my $syntax = $self->minimum_syntax_version;
+	return undef unless defined $syntax;
+	if ( $syntax and $syntax > $minimum ) {
+		$minimum = $syntax;
+	}
+
+	### FIXME - Disabled until minimum_external_version completed
+	# Is the external version greater?
+	#my $external = $self->minimum_external_version;
+	#return undef unless defined $external;
+	#if ( $external and $external > $minimum ) {
+	#	$minimum = $external;
+	#}
+
+	$minimum;
+}
+
+=pod
+
+=hea2 minimum_explicit_version
+
+The C<minimum_explicit_version> method checks through Perl code for the
+use of explicit version dependencies such as.
+
+  use 5.006;
+  use 5.005_03;
+
+Although there is almost always only one of these in a file, if more than
+one are found, the highest version dependency will be returned.
+
+Returns a L<version> object, false if no dependencies could be found,
+or C<undef> on error.
+
+=cut
+
+sub minimum_explicit_version {
+	my $self     = _self(@_) or return undef;
+	my $explicit = $self->Document->find( sub {
+		$_[1]->isa('PPI::Statement::Include') or return '';
+		$_[1]->version                        or return '';
+		1;
+		} );
+	return $explicit unless $explicit;
+
+	# Convert to version objects
+	List::Util::max map { version->new($_) } map { $_->version } @$explicit;
+}
+
+=pod
+
+=head2 minimum_syntax_version $limit
+
+The C<minimum_syntax_version> method will explicitly test only the
+Document's syntax to determine it's minimum version, to the extent
+that this is possible.
+
+It takes an optional parameter of a L<version> object defining the
+the lowest known current value. For example, if it is already known
+that it must be 5.006 or higher, then you can provide a param of
+qv(5.006) and the method will not run any of the tests below this
+version. This should provide dramatic speed improvements for
+large and/or complex documents.
+
+The limitations of parsing Perl mean that this method may provide
+artifically low results, but not artificially high results.
+
+For example, if C<minimum_syntax_version> returned 5.006, you can be
+confident it will not run on anything lower, although there is a chance
+it during actual execution it may use some untestable  feature that creates
+a dependency on a higher version.
+
+Returns a L<version> object, false if no dependencies could be found,
+or C<undef> on error.
+
+=cut
+
+sub minimum_syntax_version {
+	my $self  = _self(@_) or return undef;
+	my $limit = _INSTANCE(shift, 'version') || qv(5.004);
 
 	# Always check in descending version order.
 	# By doing it this way, the version of the first check that matches
@@ -139,15 +239,50 @@ sub minimum_version {
 	            keys %CHECKS;
 
 	# If nothing matches, we default to 5.004
-	$check and $CHECKS{$check} or qv("5.004");
+	$check and $CHECKS{$check} or '';
 }
 
+=pod
 
+=head2 minimum_external_version
+
+B<WARNING: This method has not been implemented. Any attempted use will throw
+an exception>
+
+The C<minimum_external_version> examines code for dependencies on other
+external files, and recursively traverses the dependency tree applying the
+same tests to those files as it does to the original.
+
+Returns a C<version> object, false if no dependencies could be found, or
+C<undef> on error.
+
+=cut
+
+sub minimum_external_version {
+	Carp::croak("Perl::MinimumVersion::minimum_external_version is not implemented");
+}
+
+	
 
 
 
 #####################################################################
 # Version Check Methods
+
+sub _bugfix_magic_errno {
+	my $Document = shift->Document;
+	$Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Magic')
+		and
+		$_[1]->content eq '$^E'
+	} )
+	and
+	$Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Magic')
+		and
+		$_[1]->content eq '$!'
+	} );
+}
 
 sub _pragma_utf8 {
 	shift->Document->find_any( sub {
@@ -157,21 +292,25 @@ sub _pragma_utf8 {
 	} );
 }
 
+$MATCHES{_perl_5006_pragmas} = {
+	warnings   => 1,
+	attributes => 1,
+	open       => 1,
+	filetest   => 1,
+	};
+sub _perl_5006_pragmas {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$MATCHES{_perl_5006_pragmas}->{$_[1]->pragma}
+	} );
+}
+
 sub _any_our_variables {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Variable')
 		and
 		$_[1]->type eq 'our'
-	} );
-}
-
-sub _perl_5006_pragmas {
-	shift->Document->find_any( sub {
-		$_[1]->isa('PPI::Statement::Include')
-		and
-		$_[1]->pragma
-		and
-		$_[1]->pragma =~ /^(?:warnings|attributes|open|filetest)$/
 	} );
 }
 
@@ -194,8 +333,60 @@ sub _magic_version {
 }
 
 sub _any_attributes {
+	shift->Document->find_any( 'Token::Attribute' );
+}
+
+$MATCHES{_perl_5005_pragmas} = {
+	re     => 1,
+	fields => 1,
+	attr   => 1,
+	};
+sub _perl_5005_pragmas {
 	shift->Document->find_any( sub {
-		$_[1]->isa('PPI::Token::Attribute')
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$MATCHES{_perl_5005_pragmas}->{$_[1]->pragma}
+	} );
+}
+
+# A number of modules are highly indicative of using techniques
+# that are themselves version-dependant.
+sub _perl_5005_modules {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$_[1]->module
+		and (
+			$_[1]->module eq 'Tie::Array'
+			or
+			$_[1]->module =~ /\bException\b/
+			or
+			$_[1]->module =~ /\bThread\b/
+			or
+			$_[1]->module =~ /^Error\b/
+			or
+			$_[1]->module eq 'base'
+		)
+	} );
+}
+
+sub _any_tied_arrays {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Sub')
+		and
+		$_[1]->name eq 'TIEARRAY'
+	} )
+}
+
+sub _any_quotelike_regexp {
+	shift->Document->find_any( 'Token::QuoteLike::Regexp' );
+}
+
+sub _any_INIT_blocks {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Scheduled')
+		and
+		$_[1]->type eq 'INIT'
 	} );
 }
 
@@ -209,9 +400,13 @@ sub _any_attributes {
 
 # Let sub be a function, object method, and static method
 sub _self {
-	isa(ref $_[0], __PACKAGE__) and return shift;
-	isa($_[0], __PACKAGE__)     and return shift->new(@_);
-	__PACKAGE__->new(@_);
+	if ( _INSTANCE($_[0], 'Perl::MinimumVersion') ) {
+		return shift;
+	}
+	if ( _CLASS($_[0]) and $_[0]->isa('Perl::MinimumVersion') ) {
+		return shift->new(@_);
+	}
+	Perl::MinimumVersion->new(@_);
 }
 
 1;
