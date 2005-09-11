@@ -16,9 +16,10 @@ BEGIN {
 	}
 }
 
-use Test::More tests => 24;
+use Test::More tests => 43;
+use version;
 use PPI;
-use Perl::MinimumVersion;
+use Perl::MinimumVersion 'PMV';
 
 sub version_is {
 	my $Document = PPI::Document->new( \$_[0] );
@@ -35,6 +36,69 @@ sub version_is {
 
 #####################################################################
 # Basic Testing
+
+# Test support function _max
+is( PMV, 'Perl::MinimumVersion', 'PMV constant exports correctly' );
+
+# Check the _max support function (bad)
+is( Perl::MinimumVersion::_max(),      '', '_max() returns false'      );
+is( Perl::MinimumVersion::_max(undef), '', '_max(undef) returns false' );
+is( Perl::MinimumVersion::_max(''),    '', '_max(undef) returns false' );
+
+# Check the _max support function (good)
+is_deeply( Perl::MinimumVersion::_max(qv(5.004)),
+	qv(5.004),
+	'_max(one) returns the same valud' );
+
+is_deeply( Perl::MinimumVersion::_max(qv(5.004), undef),
+	qv(5.004),
+	'_max(one, bad) returns the good version' );
+
+is_deeply( Perl::MinimumVersion::_max(qv(5.004), qv(5.006)),
+	qv(5.006),
+	'_max(two) returns the higher version' );
+
+is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.004)),
+	qv(5.006),
+	'_max(two) returns the higher version' );
+
+is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.004), qv(5.5.3)),
+	qv(5.006),
+	'_max(three) returns the higher version' );
+
+is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.8.4), undef, qv(5.004), '', qv(5.5.3)),
+	qv(5.8.4),
+	'_max(three) returns the higher version' );
+
+# Check the _max support function (bad)
+is( PMV->_max(),      '', '_max() returns false (as method)'      );
+is( PMV->_max(undef), '', '_max(undef) returns false (as method)' );
+is( PMV->_max(''),    '', '_max(undef) returns false (as method)' );
+
+# Check the _max support function (good)
+is_deeply( PMV->_max(qv(5.004)),
+	qv(5.004),
+	'_max(one) returns the same value (as method)' );
+
+is_deeply( PMV->_max(qv(5.004), undef),
+	qv(5.004),
+	'_max(one, bad) returns the good version (as method)' );
+
+is_deeply( PMV->_max(qv(5.004), qv(5.006)),
+	qv(5.006),
+	'_max(two) returns the higher version (as method)' );
+
+is_deeply( PMV->_max(qv(5.006), qv(5.004)),
+	qv(5.006),
+	'_max(two) returns the higher version (as method)' );
+
+is_deeply( PMV->_max(qv(5.006), qv(5.004), qv(5.5.3)),
+	qv(5.006),
+	'_max(three) returns the higher version (as method)' );
+
+is_deeply( PMV->_max(qv(5.006), qv(5.8.4), undef, qv(5.004), '', qv(5.5.3)),
+	qv(5.8.4),
+	'_max(three) returns the higher version (as method)' );
 
 # Constructor testing
 {

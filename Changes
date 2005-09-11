@@ -1,5 +1,9 @@
 Revision history for Perl extension Perl::MinimumVersion
 
+0.09_01 Mon Sep 12 2005
+	- Added the perlver application
+	- Added some more minor optimisation
+
 0.05 Sun Sep  4 2005
 	- Added support for explicit versions
 	- Added minimum_syntax_version method

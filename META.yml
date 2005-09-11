@@ -1,5 +1,5 @@
 name: Perl-MinimumVersion
-version: 0.05
+version: 0.09_01
 abstract: Find the minimum required Perl version for any code
 author: Adam Kennedy <cpan@ali.as>
 license: perl

@@ -4,13 +4,13 @@ package Perl::MinimumVersion;
 
 =head1 NAME
 
-Perl::MinimumVersion - Find the minimum required Perl version for any code
+Perl::MinimumVersion - Find a minimum required version of perl for Perl code
 
 =head1 SYNOPSIS
 
   # Create the checker object
   $object = Perl::MinimumVersion->new( $filename );
-  $object = Perl::MinimumVersion->new( \$source );
+  $object = Perl::MinimumVersion->new( \$source  );
   $object = Perl::MinimumVersion->new( $Document );
   
   # Find the minimum version
@@ -39,20 +39,24 @@ covers it.
 
 =cut
 
+use 5.005;
 use strict;
-use version;
+use version      'qv';
 use Carp         ();
+use Exporter     'import';
 use List::Util   ();
-use PPI          ();
 use Params::Util '_INSTANCE';
 use PPI::Util    '_Document';
+use PPI          ();
 
-use vars qw{$VERSION %CHECKS %MATCHES};
+use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.05';
-	%MATCHES = ();
+	$VERSION = '0.09_01';
 
-	# Create the list of version checks
+	# Export the PMV convenience constant
+	@EXPORT_OK = 'PMV';
+
+	# The primary list of version checks
 	%CHECKS = (
 		# Various small things
 		_bugfix_magic_errno   => qv('5.008.003'),
@@ -72,7 +76,24 @@ BEGIN {
 		_any_quotelike_regexp => qv('5.005'),
 		_any_INIT_blocks      => qv('5.005'),
 		);
+
+	# Predefine some indexes needed by various check methods
+	%MATCHES = (
+		_perl_5006_pragmas => {
+			warnings   => 1,
+			attributes => 1,
+			open       => 1,
+			filetest   => 1,
+		},
+		_perl_5005_pragmas => {
+			re         => 1,
+			fields     => 1,
+			attr       => 1,
+		},
+	);
 }
+
+sub PMV () { 'Perl::MinimumVersion' }
 
 
 
@@ -96,10 +117,21 @@ Returns a new C<Perl::MinimumVersion> object, or C<undef> on error.
 sub new {
 	my $class    = ref $_[0] ? ref shift : shift;
 	my $Document = _Document(shift) or return undef;
+	my $default  = _INSTANCE(shift, 'version') || qv(5.004);
 
 	# Create the object
 	my $self = bless {
 		Document => $Document,
+
+		# Checking limit and default minimum version.
+		# Explicitly don't check below this version.
+		default  => $default,
+
+		# Caches for resolved versions
+		explicit => undef,
+		syntax   => undef,
+		external => undef,
+
 		}, $class;
 
 	$self;
@@ -139,9 +171,7 @@ Returns a L<version> object, or C<undef> on error.
 
 sub minimum_version {
 	my $self    = _self(@_) or return undef;
-
-	# We start with a default of 5.004
-	my $minimum = qv(5.004);
+	my $minimum = $self->{default}; # Sensible default
 
 	# Is the explicit version greater?
 	my $explicit = $self->minimum_explicit_version;
@@ -151,10 +181,18 @@ sub minimum_version {
 	}
 
 	# Is the syntax version greater?
-	my $syntax = $self->minimum_syntax_version;
-	return undef unless defined $syntax;
-	if ( $syntax and $syntax > $minimum ) {
-		$minimum = $syntax;
+	# Since this is the most expensive operation (for this file),
+	# we need to be careful we don't run things we don't need to.
+	if ( defined $self->{syntax} ) {
+		if ( $self->{syntax} and $self->{syntax} > $minimum ) {
+			$minimum = $self->{syntax};
+		}
+	} else {
+		my $syntax = $self->minimum_syntax_version;
+		return undef unless defined $syntax;
+		if ( $syntax and $syntax > $minimum ) {
+			$minimum = $syntax;
+		}
 	}
 
 	### FIXME - Disabled until minimum_external_version completed
@@ -170,13 +208,13 @@ sub minimum_version {
 
 =pod
 
-=hea2 minimum_explicit_version
+=head2 minimum_explicit_version
 
 The C<minimum_explicit_version> method checks through Perl code for the
 use of explicit version dependencies such as.
 
   use 5.006;
-  use 5.005_03;
+  require 5.005_03;
 
 Although there is almost always only one of these in a file, if more than
 one are found, the highest version dependency will be returned.
@@ -187,7 +225,15 @@ or C<undef> on error.
 =cut
 
 sub minimum_explicit_version {
-	my $self     = _self(@_) or return undef;
+	my $self = _self(@_) or return undef;
+	unless ( defined $self->{explicit} ) {
+		$self->{explicit} = $self->_minimum_explicit_version;
+	}
+	$self->{explicit};
+}
+
+sub _minimum_explicit_version {
+	my $self     = shift or return undef;
 	my $explicit = $self->Document->find( sub {
 		$_[1]->isa('PPI::Statement::Include') or return '';
 		$_[1]->version                        or return '';
@@ -196,7 +242,9 @@ sub minimum_explicit_version {
 	return $explicit unless $explicit;
 
 	# Convert to version objects
-	List::Util::max map { version->new($_) } map { $_->version } @$explicit;
+	List::Util::max map { version->new($_) }
+	                map { $_->version      }
+	                @$explicit;
 }
 
 =pod
@@ -228,18 +276,26 @@ or C<undef> on error.
 =cut
 
 sub minimum_syntax_version {
-	my $self  = _self(@_) or return undef;
-	my $limit = _INSTANCE(shift, 'version') || qv(5.004);
+	my $self = _self(@_) or return undef;
+	unless ( defined $self->{syntax} ) {
+		$self->{syntax} = $self->_minimum_syntax_version;
+	}
+	$self->{syntax};
+}
+
+sub _minimum_syntax_version {
+	my $self   = shift;
+	my $filter = $self->{default};
 
 	# Always check in descending version order.
 	# By doing it this way, the version of the first check that matches
 	# is also the version of the document as a whole.
-	my $check = List::Util::first { $self->$_() }
+	my $check = List::Util::first { $self->$_()    }
 	            sort { $CHECKS{$b} <=> $CHECKS{$a} }
+	            grep { $CHECKS{$_}  >  $filter     }
 	            keys %CHECKS;
 
-	# If nothing matches, we default to 5.004
-	$check and $CHECKS{$check} or '';
+	$check ? $CHECKS{$check} : '';
 }
 
 =pod
@@ -259,10 +315,18 @@ C<undef> on error.
 =cut
 
 sub minimum_external_version {
+	my $self = _self(@_) or return undef;
+	unless ( defined $self->{external} ) {
+		$self->{external} = $self->_minimum_external_version;
+	}
+	$self->{external};
+}
+
+sub _minimum_external_version {
 	Carp::croak("Perl::MinimumVersion::minimum_external_version is not implemented");
 }
 
-	
+
 
 
 
@@ -292,12 +356,6 @@ sub _pragma_utf8 {
 	} );
 }
 
-$MATCHES{_perl_5006_pragmas} = {
-	warnings   => 1,
-	attributes => 1,
-	open       => 1,
-	filetest   => 1,
-	};
 sub _perl_5006_pragmas {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
@@ -336,11 +394,6 @@ sub _any_attributes {
 	shift->Document->find_any( 'Token::Attribute' );
 }
 
-$MATCHES{_perl_5005_pragmas} = {
-	re     => 1,
-	fields => 1,
-	attr   => 1,
-	};
 sub _perl_5005_pragmas {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
@@ -407,6 +460,14 @@ sub _self {
 		return shift->new(@_);
 	}
 	Perl::MinimumVersion->new(@_);
+}
+
+# Find the maximum version, ignoring problems
+sub _max {
+	defined $_[0] and $_[0] eq PMV and shift;
+	my @valid = grep { _INSTANCE($_, 'version') } @_;
+	my $max   = List::Util::max @valid;
+	$max ? $max : '';
 }
 
 1;
