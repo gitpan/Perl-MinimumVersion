@@ -41,7 +41,7 @@ covers it.
 
 use 5.005;
 use strict;
-use version      'qv';
+use version      ();
 use Carp         ();
 use Exporter     'import';
 use List::Util   ();
@@ -51,7 +51,7 @@ use PPI          ();
 
 use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.09_01';
+	$VERSION = '0.10';
 
 	# Export the PMV convenience constant
 	@EXPORT_OK = 'PMV';
@@ -59,22 +59,22 @@ BEGIN {
 	# The primary list of version checks
 	%CHECKS = (
 		# Various small things
-		_bugfix_magic_errno   => qv('5.008.003'),
+		_bugfix_magic_errno   => version->new('5.008.003'),
 
 		# Included in 5.6. Broken until 5.8
-		_pragma_utf8          => qv('5.008'),
+		_pragma_utf8          => version->new('5.008'),
 
-		_perl_5006_pragmas    => qv('5.006'),
-		_any_our_variables    => qv('5.006'),
-		_any_binary_literals  => qv('5.006'),
-		_magic_version        => qv('5.006'),
-		_any_attributes       => qv('5.006'),
+		_perl_5006_pragmas    => version->new('5.006'),
+		_any_our_variables    => version->new('5.006'),
+		_any_binary_literals  => version->new('5.006'),
+		_magic_version        => version->new('5.006'),
+		_any_attributes       => version->new('5.006'),
 
-		_perl_5005_pragmas    => qv('5.005'),
-		_perl_5005_modules    => qv('5.005'),
-		_any_tied_arrays      => qv('5.005'),
-		_any_quotelike_regexp => qv('5.005'),
-		_any_INIT_blocks      => qv('5.005'),
+		_perl_5005_pragmas    => version->new('5.005'),
+		_perl_5005_modules    => version->new('5.005'),
+		_any_tied_arrays      => version->new('5.005'),
+		_any_quotelike_regexp => version->new('5.005'),
+		_any_INIT_blocks      => version->new('5.005'),
 		);
 
 	# Predefine some indexes needed by various check methods
@@ -117,7 +117,7 @@ Returns a new C<Perl::MinimumVersion> object, or C<undef> on error.
 sub new {
 	my $class    = ref $_[0] ? ref shift : shift;
 	my $Document = _Document(shift) or return undef;
-	my $default  = _INSTANCE(shift, 'version') || qv(5.004);
+	my $default  = _INSTANCE(shift, 'version') || version->new(5.004);
 
 	# Create the object
 	my $self = bless {
@@ -352,7 +352,7 @@ sub _pragma_utf8 {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
 		and
-		$_[1]->pragma eq 'ut8'
+		$_[1]->pragma eq 'utf8'
 	} );
 }
 

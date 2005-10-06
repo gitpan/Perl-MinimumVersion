@@ -16,7 +16,7 @@ BEGIN {
 	}
 }
 
-use Test::More tests => 43;
+use Test::More tests => 46;
 use version;
 use PPI;
 use Perl::MinimumVersion 'PMV';
@@ -46,28 +46,28 @@ is( Perl::MinimumVersion::_max(undef), '', '_max(undef) returns false' );
 is( Perl::MinimumVersion::_max(''),    '', '_max(undef) returns false' );
 
 # Check the _max support function (good)
-is_deeply( Perl::MinimumVersion::_max(qv(5.004)),
-	qv(5.004),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.004)),
+	version->new(5.004),
 	'_max(one) returns the same valud' );
 
-is_deeply( Perl::MinimumVersion::_max(qv(5.004), undef),
-	qv(5.004),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.004), undef),
+	version->new(5.004),
 	'_max(one, bad) returns the good version' );
 
-is_deeply( Perl::MinimumVersion::_max(qv(5.004), qv(5.006)),
-	qv(5.006),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.004), version->new(5.006)),
+	version->new(5.006),
 	'_max(two) returns the higher version' );
 
-is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.004)),
-	qv(5.006),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.006), version->new(5.004)),
+	version->new(5.006),
 	'_max(two) returns the higher version' );
 
-is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.004), qv(5.5.3)),
-	qv(5.006),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.006), version->new(5.004), version->new(5.5.3)),
+	version->new(5.006),
 	'_max(three) returns the higher version' );
 
-is_deeply( Perl::MinimumVersion::_max(qv(5.006), qv(5.8.4), undef, qv(5.004), '', qv(5.5.3)),
-	qv(5.8.4),
+is_deeply( Perl::MinimumVersion::_max(version->new(5.006), version->new(5.8.4), undef, version->new(5.004), '', version->new(5.5.3)),
+	version->new(5.8.4),
 	'_max(three) returns the higher version' );
 
 # Check the _max support function (bad)
@@ -76,28 +76,28 @@ is( PMV->_max(undef), '', '_max(undef) returns false (as method)' );
 is( PMV->_max(''),    '', '_max(undef) returns false (as method)' );
 
 # Check the _max support function (good)
-is_deeply( PMV->_max(qv(5.004)),
-	qv(5.004),
+is_deeply( PMV->_max(version->new(5.004)),
+	version->new(5.004),
 	'_max(one) returns the same value (as method)' );
 
-is_deeply( PMV->_max(qv(5.004), undef),
-	qv(5.004),
+is_deeply( PMV->_max(version->new(5.004), undef),
+	version->new(5.004),
 	'_max(one, bad) returns the good version (as method)' );
 
-is_deeply( PMV->_max(qv(5.004), qv(5.006)),
-	qv(5.006),
+is_deeply( PMV->_max(version->new(5.004), version->new(5.006)),
+	version->new(5.006),
 	'_max(two) returns the higher version (as method)' );
 
-is_deeply( PMV->_max(qv(5.006), qv(5.004)),
-	qv(5.006),
+is_deeply( PMV->_max(version->new(5.006), version->new(5.004)),
+	version->new(5.006),
 	'_max(two) returns the higher version (as method)' );
 
-is_deeply( PMV->_max(qv(5.006), qv(5.004), qv(5.5.3)),
-	qv(5.006),
+is_deeply( PMV->_max(version->new(5.006), version->new(5.004), version->new(5.5.3)),
+	version->new(5.006),
 	'_max(three) returns the higher version (as method)' );
 
-is_deeply( PMV->_max(qv(5.006), qv(5.8.4), undef, qv(5.004), '', qv(5.5.3)),
-	qv(5.8.4),
+is_deeply( PMV->_max(version->new(5.006), version->new(5.8.4), undef, version->new(5.004), '', version->new(5.5.3)),
+	version->new(5.8.4),
 	'_max(three) returns the higher version (as method)' );
 
 # Constructor testing
@@ -120,7 +120,7 @@ END_PERL
 is( $Version->_any_our_variables, '', '->_any_our_variables returns false' );
 
 # This first time, lets double check some assumptions
-isa_ok( $Version->Document, 'PPI::Document' );
+isa_ok( $Version->Document, 'PPI::Document'  );
 isa_ok( $Version->minimum_version, 'version' );
 }
 
@@ -154,6 +154,14 @@ END_PERL
 my $Version = version_is( <<'END_PERL', '5.006', 'Used syntax higher than low explicit' );
 sub foo : attribute { 1 };
 require 5.005;
+END_PERL
+}
+
+# Regression bug: utf8 mispelled
+{
+my $Version = version_is( <<'END_PERL', '5.008', 'utf8 module makes the version 5.008' );
+use utf8;
+1;
 END_PERL
 }
 
