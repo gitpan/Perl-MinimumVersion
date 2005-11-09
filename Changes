@@ -1,5 +1,8 @@
 Revision history for Perl extension Perl::MinimumVersion
 
+0.11 Thy Nov 10 2005
+	- Added missing File::Find::Rule dependency
+
 0.10 Thu Oct  6 2005
 	- Fixed utf8 pragma
 	- Switched from qv() to version->new()  due to bugs

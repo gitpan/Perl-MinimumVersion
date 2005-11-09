@@ -1,5 +1,5 @@
 name: Perl-MinimumVersion
-version: 0.10
+version: 0.11
 abstract: Find the minimum required Perl version for any code
 author: Adam Kennedy <cpan@ali.as>
 license: perl
@@ -13,6 +13,7 @@ requires:
   Carp: 0
   List::Util: 1.15
   Params::Util: 0.06
+  File::Find::Rule: 0
   PPI: 1.103
 no_index:
   directory:

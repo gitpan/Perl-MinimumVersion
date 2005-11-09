@@ -55,7 +55,7 @@ sub format_version ($);
 
 use vars qw{$VERSION $VERBOSE};
 BEGIN {
-	$VERSION = '0.09_01';
+	$VERSION = '0.11';
 
 	# Configuration globals
 	$VERBOSE = '';

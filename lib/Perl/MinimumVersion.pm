@@ -51,7 +51,7 @@ use PPI          ();
 
 use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.10';
+	$VERSION = '0.11';
 
 	# Export the PMV convenience constant
 	@EXPORT_OK = 'PMV';
