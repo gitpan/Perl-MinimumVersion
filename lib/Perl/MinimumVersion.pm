@@ -43,15 +43,15 @@ use 5.005;
 use strict;
 use version      ();
 use Carp         ();
-use Exporter     'import';
 use List::Util   ();
 use Params::Util '_INSTANCE';
 use PPI::Util    '_Document';
 use PPI          ();
+use base 'Exporter';
 
 use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.11';
+	$VERSION = '0.13';
 
 	# Export the PMV convenience constant
 	@EXPORT_OK = 'PMV';
@@ -60,6 +60,7 @@ BEGIN {
 	%CHECKS = (
 		# Various small things
 		_bugfix_magic_errno   => version->new('5.008.003'),
+		_unquoted_versions    => version->new('5.008.001'),
 
 		# Included in 5.6. Broken until 5.8
 		_pragma_utf8          => version->new('5.008'),
@@ -117,7 +118,7 @@ Returns a new C<Perl::MinimumVersion> object, or C<undef> on error.
 sub new {
 	my $class    = ref $_[0] ? ref shift : shift;
 	my $Document = _Document(shift) or return undef;
-	my $default  = _INSTANCE(shift, 'version') || version->new(5.004);
+	my $default  = _INSTANCE(shift, 'version') || version->new('5.004');
 
 	# Create the object
 	my $self = bless {
@@ -348,6 +349,29 @@ sub _bugfix_magic_errno {
 	} );
 }
 
+# version->new(5.005.004);
+sub _unquoted_versions {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Number')       or return '';
+		$_[1]->{_subtype}                      or return '';
+		$_[1]->{_subtype} eq 'base256'         or return '';
+		my $stmt   = $_[1]->parent             or return '';
+		my $braces = $stmt->parent             or return '';
+		$braces->isa('PPI::Structure')         or return '';
+		$braces->braces eq '()'                or return '';
+		my $new = $braces->previous_sibling    or return '';
+		$new->isa('PPI::Token::Word')          or return '';
+		$new->content eq 'new'                 or return '';
+		my $method = $new->previous_sibling    or return '';
+		$method->isa('PPI::Token::Operator')   or return '';
+		$method->content eq '->'               or return '';
+		my $_class = $method->previous_sibling or return '';
+		$_class->isa('PPI::Token::Word')       or return '';
+		$_class->content eq 'version'          or return '';
+		1;
+	} );
+}
+
 sub _pragma_utf8 {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
@@ -464,7 +488,7 @@ sub _self {
 
 # Find the maximum version, ignoring problems
 sub _max {
-	defined $_[0] and $_[0] eq PMV and shift;
+	defined $_[0] and "$_[0]" eq PMV and shift;
 	my @valid = grep { _INSTANCE($_, 'version') } @_;
 	my $max   = List::Util::max @valid;
 	$max ? $max : '';
@@ -504,15 +528,15 @@ For other issues, or commercial enhancement or support, contact the author.
 
 =head1 AUTHORS
 
-Adam Kennedy (Maintainer), L<http://ali.as/>, cpan@ali.as
+Adam Kennedy E<lt>cpan@ali.asE<gt>
 
 =head1 SEE ALSO
 
-L<PPI>, L<version>
+L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Adam Kennedy. All rights reserved.
+Copyright (c) 2005, 2006 Adam Kennedy. All rights reserved.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

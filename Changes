@@ -1,6 +1,16 @@
 Revision history for Perl extension Perl::MinimumVersion
 
-0.11 Thy Nov 10 2005
+0.13 Sat 22 Apr 2006
+	- No functional changes
+	- Moved over from SourceForge CVS to new collaborative SVN repository
+	- Upgraded to Module::Install 0.62
+
+0.12 Fri Dec 30 2005
+	- Removed some Perl 5.8isms and coded one back in as a rule :)
+	- Upgraded to newer Module::Install
+	- Pushed version deps on some critical things
+
+0.11 Thu Nov 10 2005
 	- Added missing File::Find::Rule dependency
 
 0.10 Thu Oct  6 2005

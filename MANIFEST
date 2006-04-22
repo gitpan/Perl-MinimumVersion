@@ -1,6 +1,6 @@
 bin/perlver
 Changes
-inc/ExtUtils/AutoInstall.pm
+inc/Module/AutoInstall.pm
 inc/Module/Install.pm
 inc/Module/Install/AutoInstall.pm
 inc/Module/Install/Base.pm
@@ -20,3 +20,4 @@ META.yml
 README
 t/01_compile.t
 t/02_main.t
+t/99_pod.t
