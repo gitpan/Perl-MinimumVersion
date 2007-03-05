@@ -3,10 +3,10 @@ NAME
     code
 
 SYNOPSIS
-      # Create the checker object
+      # Create the version checking object
       $object = Perl::MinimumVersion->new( $filename );
       $object = Perl::MinimumVersion->new( \$source  );
-      $object = Perl::MinimumVersion->new( $Document );
+      $object = Perl::MinimumVersion->new( $ppi_document );
   
       # Find the minimum version
       $version = $object->minimum_version;
@@ -16,21 +16,21 @@ DESCRIPTION
     version of perl required to be able to run it. Because it is based on
     PPI, it can do this without having to actually load the code.
 
-    This first release only tests based on the syntax of your code.
+    Currently it tests both the syntax of your code, and the use of explicit
+    version dependencies such as "require 5.005".
 
-    As this module develops, it will also be able to check explicitly
-    specified versions via "require 5.005;", and trace module dependencies
-    as needed.
-
-    Amoungst other things, we hope to be able to build a test that is able
-    to tell when the version needed based on the code syntax is higher than
-    the version you explicitly specified (and thus, is a package bug).
+    Future plans are to also add support for tracing module dependencies.
 
     Using "Perl::MinimumVersion" is dead simple, the synopsis pretty much
     covers it.
 
 METHODS
-  new $filename | \$source | $PPI_Document
+  new
+      # Create the version checking object
+      $object = Perl::MinimumVersion->new( $filename );
+      $object = Perl::MinimumVersion->new( \$source  );
+      $object = Perl::MinimumVersion->new( $ppi_document );
+
     The "new" constructor creates a new version checking object for a
     PPI::Document. You can also provide the document to be read as a file
     name, or as a "SCALAR" reference containing the code.
