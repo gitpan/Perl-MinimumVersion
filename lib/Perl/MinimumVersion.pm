@@ -39,14 +39,14 @@ use strict;
 use version      ();
 use Carp         ();
 use List::Util   ();
-use Params::Util '_INSTANCE';
+use Params::Util '_INSTANCE', '_CLASS';
 use PPI::Util    '_Document';
 use PPI          ();
 use base 'Exporter';
 
 use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.14';
+	$VERSION = '0.15';
 
 	# Export the PMV convenience constant
 	@EXPORT_OK = 'PMV';
@@ -57,6 +57,7 @@ BEGIN {
 		_bugfix_magic_errno   => version->new('5.008.003'),
 		_unquoted_versions    => version->new('5.008.001'),
 		_constant_hash        => version->new('5.008'),
+		_use_base_exporter    => version->new('5.008'),
 
 		# Included in 5.6. Broken until 5.8
 		_pragma_utf8          => version->new('5.008'),
@@ -265,12 +266,12 @@ version. This should provide dramatic speed improvements for
 large and/or complex documents.
 
 The limitations of parsing Perl mean that this method may provide
-artifically low results, but not artificially high results.
+artifically low results, but should not artificially high results.
 
 For example, if C<minimum_syntax_version> returned 5.006, you can be
 confident it will not run on anything lower, although there is a chance
-it during actual execution it may use some untestable  feature that creates
-a dependency on a higher version.
+that during actual execution it may use some untestable  feature that
+creates a dependency on a higher version.
 
 Returns a L<version> object, false if no dependencies could be found,
 or C<undef> on error.
@@ -278,16 +279,35 @@ or C<undef> on error.
 =cut
 
 sub minimum_syntax_version {
-	my $self = _self(@_) or return undef;
-	unless ( defined $self->{syntax} ) {
-		$self->{syntax} = $self->_minimum_syntax_version;
+	my $self  = _self(@_) or return undef;
+	my $limit = ref($_[0]) ? $_[1] : $_[2];
+	if ( defined $limit and ! _INSTANCE($limit, 'version') ) {
+		$limit = version->new("$limit");
 	}
-	$self->{syntax};
+	if ( defined $self->{syntax} ) {
+		if ( $self->{syntax} >= $limit ) {
+			# Previously discovered minimum is what they want
+			return $self->{syntax};
+		}
+
+		# Rather than return a value BELOW their filter,
+		# which they would not be expecting, return false.
+		return '';
+	}
+
+	# Look for the value
+	my $syntax = $self->_minimum_syntax_version( $limit );
+
+	# If we found a value, it will be stable, cache it.
+	# If we did NOT, don't cache as subsequent runs without
+	# the filter may find a version.
+	$self->{syntax} = $syntax if $syntax;
+	return $syntax;
 }
 
 sub _minimum_syntax_version {
 	my $self   = shift;
-	my $filter = $self->{default};
+	my $filter = shift || $self->{default};
 
 	# Always check in descending version order.
 	# By doing it this way, the version of the first check that matches
@@ -377,8 +397,12 @@ sub _pragma_utf8 {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
 		and
-		$_[1]->module eq 'utf8'
-		# This used to be pragma(), but that was buggy in PPI v1.118
+		(
+			($_[1]->module and $_[1]->module eq 'utf8')
+			or
+			($_[1]->pragma and $_[1]->pragma eq 'utf8')
+		)
+		# This used to be just pragma(), but that was buggy in PPI v1.118
 	} );
 }
 
@@ -484,6 +508,18 @@ sub _any_INIT_blocks {
 	} );
 }
 
+# use base 'Exporter' doesn't work reliably everywhere until 5.008
+sub _use_base_exporter {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$_[1]->module eq 'base'
+		and
+		# Add the "not colon" characters to avoid accidentally
+		# colliding with any other Exporter-named modules
+		$_[1]->content =~ /[^:]\bExporter\b[^:]/
+	} );
+}
 
 
 
@@ -498,9 +534,9 @@ sub _self {
 		return shift;
 	}
 	if ( _CLASS($_[0]) and $_[0]->isa('Perl::MinimumVersion') ) {
-		return shift->new(@_);
+		return shift->new($_[0]);
 	}
-	Perl::MinimumVersion->new(@_);
+	Perl::MinimumVersion->new($_[0]);
 }
 
 # Find the maximum version, ignoring problems
@@ -545,7 +581,7 @@ For other issues, or commercial enhancement or support, contact the author.
 
 =head1 AUTHORS
 
-Adam Kennedy E<lt>cpan@ali.asE<gt>
+Adam Kennedy E<lt>adamk@cpan.orgE<gt>
 
 =head1 SEE ALSO
 
@@ -553,7 +589,7 @@ L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005, 2006 Adam Kennedy. All rights reserved.
+Copyright (c) 2005, 2006 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

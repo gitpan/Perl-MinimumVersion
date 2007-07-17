@@ -75,11 +75,11 @@ METHODS
     provide dramatic speed improvements for large and/or complex documents.
 
     The limitations of parsing Perl mean that this method may provide
-    artifically low results, but not artificially high results.
+    artifically low results, but should not artificially high results.
 
     For example, if "minimum_syntax_version" returned 5.006, you can be
     confident it will not run on anything lower, although there is a chance
-    it during actual execution it may use some untestable feature that
+    that during actual execution it may use some untestable feature that
     creates a dependency on a higher version.
 
     Returns a version object, false if no dependencies could be found, or
@@ -123,13 +123,13 @@ SUPPORT
     author.
 
 AUTHORS
-    Adam Kennedy <cpan@ali.as>
+    Adam Kennedy <adamk@cpan.org>
 
 SEE ALSO
     <http://ali.as/>, PPI, version
 
 COPYRIGHT
-    Copyright (c) 2005, 2006 Adam Kennedy. All rights reserved.
+    Copyright (c) 2005, 2006 Adam Kennedy.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.

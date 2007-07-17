@@ -8,7 +8,7 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More tests => 52;
+use Test::More tests => 58;
 use version;
 use File::Spec::Functions ':ALL';
 use PPI;
@@ -174,6 +174,35 @@ SCOPE: {
 my $v = version_is( <<'END_PERL', '5.004', 'constant hash adds a 5.008 dep' );
 use constant FOO => 1;
 };
+1;
+END_PERL
+}
+
+# Check that minimum_syntax_version's limit param is respected
+SCOPE: {
+my $doc = PPI::Document->new(\'our $x'); # requires 5.006 syntax
+my $minver = Perl::MinimumVersion->new($doc);
+is(
+  $minver->minimum_syntax_version,
+  5.006,
+  "5.006 syntax found when no limit supplied",
+);
+is(
+  $minver->minimum_syntax_version(version->new(5.008)),
+  '',
+  "no syntax constraints found when 5.008 limit supplied",
+);
+is(
+  Perl::MinimumVersion->minimum_syntax_version($doc, version->new(5.008)),
+  '',
+  "also works as object method with limit: no constriants found",
+);
+}
+
+# Check the use of constant hashes
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.008', 'use base "Exporter" is a 5.008 dep' );
+use base 'Exporter';
 1;
 END_PERL
 }

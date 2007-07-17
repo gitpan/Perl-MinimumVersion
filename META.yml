@@ -1,12 +1,12 @@
 --- 
 abstract: Find a minimum required version of perl for Perl code
-author: Adam Kennedy <cpan@ali.as>
+author: Adam Kennedy <adamk@cpan.org>
 build_requires: 
   File::Spec: 0.80
   Test::More: 0.47
   Test::Script: 1.02
 distribution_type: module
-generated_by: Module::Install version 0.65_01
+generated_by: Module::Install version 0.67
 license: perl
 meta-spec: 
   url: http://module-build.sourceforge.net/META-spec-v1.3.html
@@ -19,9 +19,9 @@ no_index:
 requires: 
   Carp: 0
   File::Find::Rule: 0
-  List::Util: 1.17
+  List::Util: 1.19
   PPI: 1.118
   Params::Util: 0.06
   perl: 5.005
-  version: 0.70
-version: 0.14
+  version: 0.7203
+version: 0.15
