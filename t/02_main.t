@@ -8,7 +8,7 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More tests => 58;
+use Test::More tests => 70;
 use version;
 use File::Spec::Functions ':ALL';
 use PPI;
@@ -101,7 +101,7 @@ SCOPE: {
 	# version_is tests the final method
 
 	# Bad things
-	foreach ( [], {}, sub { 1 } ) { # Add undef as well after PPI 0.906
+	foreach ( {}, sub { 1 }, undef ) {
 		is( Perl::MinimumVersion->new( $_ ), undef, '->new(evil) returns undef' );
 	}
 }
@@ -178,6 +178,22 @@ use constant FOO => 1;
 END_PERL
 }
 
+# Check 'mro' pragma
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.010', '"use mro" matches expected version' );
+use mro 'c3';
+END_PERL
+is( $v->_perl_5010_pragmas, 1, '->_any_our_variables returns true' );
+}
+
+# Check the localized soft refernence pragma
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.008', 'Localized soft reference matched expected version' );
+local ${ "${class}::DIE" } = 1;
+END_PERL
+is( $v->_local_soft_reference, 1, '->_local_soft_reference returns true' );
+}
+
 # Check that minimum_syntax_version's limit param is respected
 SCOPE: {
 my $doc = PPI::Document->new(\'our $x'); # requires 5.006 syntax
@@ -205,6 +221,33 @@ my $v = version_is( <<'END_PERL', '5.008', 'use base "Exporter" is a 5.008 dep' 
 use base 'Exporter';
 1;
 END_PERL
+}
+
+# test version_markers
+SCOPE: {
+my $perl = <<'END_PERL';
+use 5.005;
+use mro 'dfs';
+our $VERSION;
+sub example : Sufficies { }
+END_PERL
+my @result = PMV->version_markers(\$perl);
+is(@result, 6, "we find three versioned marked in the result");
+
+my @expect = (
+	'5.010' => [ qw(_perl_5010_pragmas) ],
+	'5.006' => [ qw(_any_our_variables _any_attributes) ],
+	'5.005' => [ qw(explicit) ],
+);
+
+for my $i (map { $_ * 2 } 0 .. $#result / 2) {
+	is_deeply(
+		[ "$result[$i]", [ sort @{ $result[$i + 1] } ] ],
+		[ $expect[$i],   [ sort @{ $expect[$i + 1] } ] ],
+		"correct data in results pos $i",
+	);
+}
+
 }
 
 1;

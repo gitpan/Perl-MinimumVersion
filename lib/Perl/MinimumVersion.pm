@@ -12,7 +12,7 @@ Perl::MinimumVersion - Find a minimum required version of perl for Perl code
   $object = Perl::MinimumVersion->new( $filename );
   $object = Perl::MinimumVersion->new( \$source  );
   $object = Perl::MinimumVersion->new( $ppi_document );
-  
+
   # Find the minimum version
   $version = $object->minimum_version;
 
@@ -42,22 +42,28 @@ use List::Util   ();
 use Params::Util '_INSTANCE', '_CLASS';
 use PPI::Util    '_Document';
 use PPI          ();
-use base 'Exporter';
+use Exporter     ();
 
-use vars qw{$VERSION @EXPORT_OK %CHECKS %MATCHES};
+use vars qw{$VERSION @ISA @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '0.15';
+	$VERSION = '1.18';
 
 	# Export the PMV convenience constant
+	@ISA       = 'Exporter';
 	@EXPORT_OK = 'PMV';
 
 	# The primary list of version checks
 	%CHECKS = (
+		_perl_5010_pragmas    => version->new('5.010'),
+		_perl_5010_operators  => version->new('5.010'),
+		_perl_5010_magic      => version->new('5.010'),
+
 		# Various small things
 		_bugfix_magic_errno   => version->new('5.008.003'),
 		_unquoted_versions    => version->new('5.008.001'),
 		_constant_hash        => version->new('5.008'),
 		_use_base_exporter    => version->new('5.008'),
+		_local_soft_reference => version->new('5.008'),
 
 		# Included in 5.6. Broken until 5.8
 		_pragma_utf8          => version->new('5.008'),
@@ -67,7 +73,9 @@ BEGIN {
 		_any_binary_literals  => version->new('5.006'),
 		_magic_version        => version->new('5.006'),
 		_any_attributes       => version->new('5.006'),
+		# _three_argument_open  => version->new('5.006'),
 
+		_any_qr_tokens        => version->new('5.005_03'),
 		_perl_5005_pragmas    => version->new('5.005'),
 		_perl_5005_modules    => version->new('5.005'),
 		_any_tied_arrays      => version->new('5.005'),
@@ -77,6 +85,19 @@ BEGIN {
 
 	# Predefine some indexes needed by various check methods
 	%MATCHES = (
+		_perl_5010_pragmas => {
+			mro        => 1,
+			feature    => 1,
+		},
+		_perl_5010_operators => {
+			'//'       => 1,
+			'//='      => 1,
+			'~~'       => 1,
+		},
+		_perl_5010_magic => {
+			'%+'       => 1,
+			'%-'       => 1,
+		},
 		_perl_5006_pragmas => {
 			warnings   => 1,
 			attributes => 1,
@@ -349,11 +370,73 @@ sub _minimum_external_version {
 }
 
 
+=head2 version_markers
+
+This method returns a list of pairs in the form:
+
+  ($version, \@markers)
+
+Each pair represents all the markers that could be found indicating that the
+version was the minimum needed version.  C<@markers> is an array of strings.
+Currently, these strings are not as clear as they might be, but this may be
+changed in the future.  In other words: don't rely on them as specific
+identifiers.
+
+=cut
+
+sub version_markers {
+	my $self = _self(@_) or return undef;
+
+	my %markers;
+
+	if (my $explicit = $self->minimum_explicit_version) {
+		$markers{ $explicit } = [ 'explicit' ];
+	}
+
+	for my $check (keys %CHECKS) {
+		next unless $self->$check();
+		my $markers = $markers{ $CHECKS{$check} } ||= [];
+		push @$markers, $check;
+	}
+
+	my @return;
+	my %marker_ver = map { $_ => version->new($_) } keys %markers;
+
+	for my $ver (sort { $marker_ver{$b} <=> $marker_ver{$a} } keys %markers) {
+		push @return, $marker_ver{$ver} => $markers{$ver};
+	}
+
+	return @return;
+}
 
 
 
 #####################################################################
 # Version Check Methods
+
+sub _perl_5010_pragmas {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$MATCHES{_perl_5010_pragmas}->{$_[1]->pragma}
+	} );
+}
+
+sub _perl_5010_operators {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Magic')
+		and
+		$MATCHES{_perl_5010_operators}->{$_[1]->content}
+	} );
+}
+
+sub _perl_5010_magic {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Operator')
+		and
+		$MATCHES{_perl_5010_magic}->{$_[1]->content}
+	} );
+}
 
 sub _bugfix_magic_errno {
 	my $Document = shift->Document;
@@ -459,6 +542,10 @@ sub _any_attributes {
 	shift->Document->find_any( 'Token::Attribute' );
 }
 
+sub _any_qr_tokens {
+	shift->Document->find_any( 'Token::QuoteLike::Regexp' );
+}
+
 sub _perl_5005_pragmas {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Statement::Include')
@@ -521,6 +608,36 @@ sub _use_base_exporter {
 	} );
 }
 
+# You can't localize a soft reference
+sub _local_soft_reference {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Variable')  or return '';
+		$_[1]->type eq 'local'                  or return '';
+
+		# The second child should be a '$' cast.
+		my @child = $_[1]->schildren;
+		scalar(@child) >= 2                     or return '';
+		$child[1]->isa('PPI::Token::Cast')      or return '';
+		$child[1]->content eq '$'               or return '';
+
+		# The third child should be a block
+		$child[2]->isa('PPI::Structure::Block') or return '';
+
+		# Inside the block should be a string in a statement
+		my $statement = $child[2]->schild(0)    or return '';
+		$statement->isa('PPI::Statement')       or return '';
+		my $inside = $statement->schild(0)      or return '';
+		$inside->isa('PPI::Token::Quote')       or return '';
+
+		# This is indeed a localized soft reference
+		return 1;
+	} );
+}
+
+# sub _three_argument_open {
+#     ...to be written...
+# }
+
 
 
 
@@ -553,8 +670,8 @@ sub _max {
 
 =head1 BUGS
 
-It's very early days, so this probably doesn't catch anywhere near enough
-syntax cases, and I personally don't know enough of them.
+B<Perl::MinimumVersion> does a reasonable job of catching the best-known
+explicit
 
 B<However> it is exceedingly easy to add a new syntax check, so if you
 find something this is missing, copy and paste one of the existing
@@ -565,11 +682,15 @@ I don't even need an entire diff... just the function and version.
 
 =head1 TO DO
 
-- Write lots more version checkers
+B<Write lots more version checkers>
 
-- Write the explicit version checker
+- Perl 5.10 operators and language structures
 
-- Write the recursive module descend stuff
+- Three-argument open
+
+B<Write the explicit version checker>
+
+B<Write the recursive module descend stuff>
 
 =head1 SUPPORT
 
@@ -589,7 +710,7 @@ L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005, 2006 Adam Kennedy.
+Copyright 2005 - 2008 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

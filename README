@@ -7,7 +7,7 @@ SYNOPSIS
       $object = Perl::MinimumVersion->new( $filename );
       $object = Perl::MinimumVersion->new( \$source  );
       $object = Perl::MinimumVersion->new( $ppi_document );
-  
+
       # Find the minimum version
       $version = $object->minimum_version;
 
@@ -96,9 +96,20 @@ METHODS
     Returns a "version" object, false if no dependencies could be found, or
     "undef" on error.
 
+  version_markers
+    This method returns a list of pairs in the form:
+
+      ($version, \@markers)
+
+    Each pair represents all the markers that could be found indicating that
+    the version was the minimum needed version. @markers is an array of
+    strings. Currently, these strings are not as clear as they might be, but
+    this may be changed in the future. In other words: don't rely on them as
+    specific identifiers.
+
 BUGS
-    It's very early days, so this probably doesn't catch anywhere near
-    enough syntax cases, and I personally don't know enough of them.
+    Perl::MinimumVersion does a reasonable job of catching the best-known
+    explicit
 
     However it is exceedingly easy to add a new syntax check, so if you find
     something this is missing, copy and paste one of the existing 5 line
@@ -108,11 +119,15 @@ BUGS
     I don't even need an entire diff... just the function and version.
 
 TO DO
-    - Write lots more version checkers
+    Write lots more version checkers
 
-    - Write the explicit version checker
+    - Perl 5.10 operators and language structures
 
-    - Write the recursive module descend stuff
+    - Three-argument open
+
+    Write the explicit version checker
+
+    Write the recursive module descend stuff
 
 SUPPORT
     All bugs should be filed via the CPAN bug tracker at
@@ -129,7 +144,7 @@ SEE ALSO
     <http://ali.as/>, PPI, version
 
 COPYRIGHT
-    Copyright (c) 2005, 2006 Adam Kennedy.
+    Copyright 2005 - 2008 Adam Kennedy.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
