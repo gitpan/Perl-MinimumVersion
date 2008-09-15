@@ -19,13 +19,13 @@ no_index:
     - inc
     - t
 requires:
-  Carp: 0
-  File::Find::Rule: 0
+  File::Find::Rule: 0.30
+  File::Find::Rule::Perl: 1.04
   List::Util: 1.19
-  PPI: 1.118
+  PPI: 1.201
   Params::Util: 0.25
   perl: 5.005
   version: 0.76
 resources:
   license: http://dev.perl.org/licenses/
-version: 1.18
+version: 1.19
