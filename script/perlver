@@ -16,7 +16,7 @@ perlver - The Perl Minimum Version Analyzer
   Scanning lib/Perl/MinimumVersion.pm... done
   Scanning t/01_compile.t... done
   Scanning t/02_main.t... done
-  
+
       ---------------------------------------------------------
     | file                       | explicit | syntax | external |
     | --------------------------------------------------------- |
@@ -24,9 +24,9 @@ perlver - The Perl Minimum Version Analyzer
     | t/01_compile.t             | ~        | ~      | n/a      |
     | t/02_main.t                | ~        | ~      | n/a      |
       ---------------------------------------------------------
-    
+
   Minimum version of Perl required: ...
-  
+
   adam@red:~$
 
 =head1 DESCRIPTION
@@ -55,13 +55,14 @@ sub error          (@);
 sub format_version ($);
 sub dist           ($);
 
-use vars qw{$VERSION $VERBOSE $BLAME};
+use vars qw{$VERSION $VERBOSE $BLAME $EXPLAIN};
 BEGIN {
-	$VERSION = '1.19';
+	$VERSION = '1.20';
 
 	# Configuration globals
 	$VERBOSE = '';
 	$BLAME   = '';
+	$EXPLAIN = '';
 
 	# Unbuffer output
 	$| = 1;
@@ -77,6 +78,7 @@ BEGIN {
 GetOptions(
 	verbose => \$VERBOSE,
 	blame   => \$BLAME,
+	explain => \$EXPLAIN,
 );
 
 # Get the target
@@ -139,6 +141,8 @@ sub summary {
 		# Check the syntax version
 		$result->[2] = $pmv->minimum_syntax_version;
 
+		$result->[4] = $pmv->{syntax_check_failed} if exists $pmv->{syntax_check_failed};
+
 		verbose "[ok]\n";
 	}
 
@@ -158,6 +162,7 @@ sub summary {
 		$output->[2] = format_version($result->[2]);
 		# $output->[3] = format_version($result->[3]);
 		$output->[3] = 'n/a';
+		$output->[4] = $result->[4] || '' if ($EXPLAIN);
 		push @outputs, $output;
 	}
 
@@ -175,6 +180,10 @@ sub summary {
 	my $len_all       = $len0 + $len1 + $len2 + $len3 + 9;
 	my $len_totals    = $len1 + $len2 + $len3 + 6;
 	my $line_format   = " | %-${len0}s | %-${len1}s | %-${len2}s | %-${len3}s |\n";
+	if ($EXPLAIN) {
+	  chomp($line_format);
+	  $line_format.="  (%s)\n";
+	}
 	my $spacer        = '-' x $len_all;
 	my $error_message = "ERROR DETECTED : ACTUAL DEPENDENCY HIGHER THAN SPECIFIED";
 	my $error_length  = length $error_message;
@@ -245,14 +254,14 @@ sub blame {
 
 sub find {
 	my $dir   = shift;
-	my $perl  = File::Find::Rule->perl_files;
+	my $perl  = File::Find::Rule->perl_file;
 	my $build = File::Find::Rule->name('blib', '_build')->directory;
 	return dist($dir)
 		? File::Find::Rule->any(
 				$build->prune->discard,
 				$perl,
-		  )->in( $target )
-		: $perl->in( $target );
+		  )->in( $dir )
+		: $perl->in( $dir );
 }
 
 

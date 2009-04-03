@@ -38,15 +38,15 @@ use 5.005;
 use strict;
 use version      ();
 use Carp         ();
-use List::Util   ();
-use Params::Util '_INSTANCE', '_CLASS';
-use PPI::Util    '_Document';
-use PPI          ();
 use Exporter     ();
+use List::Util   ();
+use Params::Util ('_INSTANCE', '_CLASS');
+use PPI::Util    ('_Document');
+use PPI          ();
 
 use vars qw{$VERSION @ISA @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '1.19';
+	$VERSION = '1.20';
 
 	# Export the PMV convenience constant
 	@ISA       = 'Exporter';
@@ -57,6 +57,8 @@ BEGIN {
 		_perl_5010_pragmas    => version->new('5.010'),
 		_perl_5010_operators  => version->new('5.010'),
 		_perl_5010_magic      => version->new('5.010'),
+
+		_perl_5008_pragmas    => version->new('5.008'),
 
 		# Various small things
 		_bugfix_magic_errno   => version->new('5.008.003'),
@@ -73,41 +75,49 @@ BEGIN {
 		_any_binary_literals  => version->new('5.006'),
 		_magic_version        => version->new('5.006'),
 		_any_attributes       => version->new('5.006'),
+		_any_CHECK_blocks     => version->new('5.006'),
 		# _three_argument_open  => version->new('5.006'),
 
-		_any_qr_tokens        => version->new('5.005_03'),
+		_any_qr_tokens        => version->new('5.005.03'),
 		_perl_5005_pragmas    => version->new('5.005'),
 		_perl_5005_modules    => version->new('5.005'),
 		_any_tied_arrays      => version->new('5.005'),
 		_any_quotelike_regexp => version->new('5.005'),
 		_any_INIT_blocks      => version->new('5.005'),
-		);
+	);
 
 	# Predefine some indexes needed by various check methods
 	%MATCHES = (
 		_perl_5010_pragmas => {
-			mro        => 1,
-			feature    => 1,
+			mro     => 1,
+			feature => 1,
 		},
 		_perl_5010_operators => {
-			'//'       => 1,
-			'//='      => 1,
-			'~~'       => 1,
+			'//'  => 1,
+			'//=' => 1,
+			'~~'  => 1,
 		},
 		_perl_5010_magic => {
-			'%+'       => 1,
-			'%-'       => 1,
+			'%+' => 1,
+			'%-' => 1,
+		},
+		_perl_5008_pragmas => {
+			threads           => 1,
+			'threads::shared' => 1,
+			sort              => 1,
 		},
 		_perl_5006_pragmas => {
-			warnings   => 1,
-			attributes => 1,
-			open       => 1,
-			filetest   => 1,
+			warnings             => 1, #may be ported into older version
+			'warnings::register' => 1,
+			attributes           => 1,
+			open                 => 1,
+			filetest             => 1,
+			charnames            => 1,
 		},
 		_perl_5005_pragmas => {
-			re         => 1,
-			fields     => 1,
-			attr       => 1,
+			re     => 1,
+			fields => 1, # can be installed from CPAN, with base.pm
+			attr   => 1,
 		},
 	);
 }
@@ -155,8 +165,7 @@ sub new {
 		explicit => undef,
 		syntax   => undef,
 		external => undef,
-
-		}, $class;
+	}, $class;
 
 	$self;
 }
@@ -170,7 +179,9 @@ back out of the version checker.
 
 =cut
 
-sub Document { $_[0]->{Document} }
+sub Document {
+	$_[0]->{Document}
+}
 
 
 
@@ -262,7 +273,7 @@ sub _minimum_explicit_version {
 		$_[1]->isa('PPI::Statement::Include') or return '';
 		$_[1]->version                        or return '';
 		1;
-		} );
+	} );
 	return $explicit unless $explicit;
 
 	# Convert to version objects
@@ -317,12 +328,15 @@ sub minimum_syntax_version {
 	}
 
 	# Look for the value
-	my $syntax = $self->_minimum_syntax_version( $limit );
+	my ($syntax, $check_failed) = $self->_minimum_syntax_version( $limit );
 
 	# If we found a value, it will be stable, cache it.
 	# If we did NOT, don't cache as subsequent runs without
 	# the filter may find a version.
-	$self->{syntax} = $syntax if $syntax;
+	if ($syntax) {
+		$self->{syntax} = $syntax;
+		$self->{syntax_check_failed} = $check_failed;
+	}
 	return $syntax;
 }
 
@@ -338,7 +352,8 @@ sub _minimum_syntax_version {
 	            grep { $CHECKS{$_}  >  $filter     }
 	            keys %CHECKS;
 
-	$check ? $CHECKS{$check} : '';
+	return ($CHECKS{$check},$check) if $check;
+	return ('','');
 }
 
 =pod
@@ -369,6 +384,7 @@ sub _minimum_external_version {
 	Carp::croak("Perl::MinimumVersion::minimum_external_version is not implemented");
 }
 
+=pod
 
 =head2 version_markers
 
@@ -389,24 +405,24 @@ sub version_markers {
 
 	my %markers;
 
-	if (my $explicit = $self->minimum_explicit_version) {
+	if ( my $explicit = $self->minimum_explicit_version ) {
 		$markers{ $explicit } = [ 'explicit' ];
 	}
 
-	for my $check (keys %CHECKS) {
+	foreach my $check ( keys %CHECKS ) {
 		next unless $self->$check();
 		my $markers = $markers{ $CHECKS{$check} } ||= [];
 		push @$markers, $check;
 	}
 
-	my @return;
+	my @rv;
 	my %marker_ver = map { $_ => version->new($_) } keys %markers;
 
-	for my $ver (sort { $marker_ver{$b} <=> $marker_ver{$a} } keys %markers) {
-		push @return, $marker_ver{$ver} => $markers{$ver};
+	foreach my $ver ( sort { $marker_ver{$b} <=> $marker_ver{$a} } keys %markers ) {
+		push @rv, $marker_ver{$ver} => $markers{$ver};
 	}
 
-	return @return;
+	return @rv;
 }
 
 
@@ -435,6 +451,14 @@ sub _perl_5010_magic {
 		$_[1]->isa('PPI::Token::Operator')
 		and
 		$MATCHES{_perl_5010_magic}->{$_[1]->content}
+	} );
+}
+
+sub _perl_5008_pragmas {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$MATCHES{_perl_5008_pragmas}->{$_[1]->pragma}
 	} );
 }
 
@@ -542,6 +566,14 @@ sub _any_attributes {
 	shift->Document->find_any( 'Token::Attribute' );
 }
 
+sub _any_CHECK_blocks {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement::Scheduled')
+		and
+		$_[1]->type eq 'CHECK'
+	} );
+}
+
 sub _any_qr_tokens {
 	shift->Document->find_any( 'Token::QuoteLike::Regexp' );
 }
@@ -564,7 +596,7 @@ sub _perl_5005_modules {
 		and (
 			$_[1]->module eq 'Tie::Array'
 			or
-			$_[1]->module =~ /\bException\b/
+			($_[1]->module =~ /\bException\b/ and $_[1]->module !~ /^CPAN::/)
 			or
 			$_[1]->module =~ /\bThread\b/
 			or
@@ -634,9 +666,28 @@ sub _local_soft_reference {
 	} );
 }
 
-# sub _three_argument_open {
-#     ...to be written...
-# }
+sub _three_argument_open {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Statement')  or return '';
+		my @children=$_[1]->children;
+		@children >= 7                or return '';
+		$children[0]->isa('PPI::Token::Word') or return '';
+		$children[0]->content eq 'open'       or return '';
+		my $comma=0;
+		foreach my $n (@children) {
+		  if ($n->isa('PPI::Token::Operator')) {
+		    if ($n->content eq ',') {
+		      $comma++;
+		    } else {
+		      return '';
+		    }
+		  }
+		}
+		return '' if $comma<2;
+		return 1;
+	} );
+
+}
 
 
 
@@ -671,7 +722,7 @@ sub _max {
 =head1 BUGS
 
 B<Perl::MinimumVersion> does a reasonable job of catching the best-known
-explicit
+explicit version dependencies.
 
 B<However> it is exceedingly easy to add a new syntax check, so if you
 find something this is missing, copy and paste one of the existing
@@ -710,7 +761,7 @@ L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright 2005 - 2008 Adam Kennedy.
+Copyright 2005 - 2009 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

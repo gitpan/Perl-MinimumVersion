@@ -5,7 +5,9 @@ inc/Module/Install/Can.pm
 inc/Module/Install/Fetch.pm
 inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
+inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
+inc/Module/Install/With.pm
 inc/Module/Install/WriteAll.pm
 lib/Perl/MinimumVersion.pm
 LICENSE
@@ -16,6 +18,7 @@ README
 script/perlver
 t/01_compile.t
 t/02_main.t
+t/03_open_3arg.t
 t/97_meta.t
 t/98_pod.t
 t/99_pmv.t

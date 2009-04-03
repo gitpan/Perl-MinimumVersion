@@ -5,9 +5,11 @@ author:
 build_requires:
   File::Spec: 0.80
   Test::More: 0.47
-  Test::Script: 1.02
+  Test::Script: 1.03
+configure_requires:
+  ExtUtils::MakeMaker: 6.48
 distribution_type: module
-generated_by: 'Module::Install version 0.77'
+generated_by: 'Module::Install version 0.81'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -21,11 +23,13 @@ no_index:
 requires:
   File::Find::Rule: 0.30
   File::Find::Rule::Perl: 1.04
-  List::Util: 1.19
+  List::Util: 1.18
   PPI: 1.201
   Params::Util: 0.25
   perl: 5.005
   version: 0.76
 resources:
+  ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Perl-MinimumVersion
   license: http://dev.perl.org/licenses/
-version: 1.19
+  repository: http://svn.ali.as/cpan/trunk/Perl-MinimumVersion
+version: 1.20
