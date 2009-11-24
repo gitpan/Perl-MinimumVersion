@@ -43,10 +43,11 @@ use List::Util   ();
 use Params::Util ('_INSTANCE', '_CLASS');
 use PPI::Util    ('_Document');
 use PPI          ();
+use Perl::Critic::Utils 1.104 qw{ :characters :severities :data_conversion :classification :ppi};
 
 use vars qw{$VERSION @ISA @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '1.20';
+	$VERSION = '1.21';
 
 	# Export the PMV convenience constant
 	@ISA       = 'Exporter';
@@ -73,10 +74,12 @@ BEGIN {
 		_perl_5006_pragmas    => version->new('5.006'),
 		_any_our_variables    => version->new('5.006'),
 		_any_binary_literals  => version->new('5.006'),
+		_any_version_literals => version->new('5.006'), #v-string
 		_magic_version        => version->new('5.006'),
 		_any_attributes       => version->new('5.006'),
 		_any_CHECK_blocks     => version->new('5.006'),
-		# _three_argument_open  => version->new('5.006'),
+		_three_argument_open  => version->new('5.006'),
+		_weaken               => version->new('5.006'),
 
 		_any_qr_tokens        => version->new('5.005.03'),
 		_perl_5005_pragmas    => version->new('5.005'),
@@ -84,6 +87,9 @@ BEGIN {
 		_any_tied_arrays      => version->new('5.005'),
 		_any_quotelike_regexp => version->new('5.005'),
 		_any_INIT_blocks      => version->new('5.005'),
+		_substr_4_arg         => version->new('5.005'),
+
+		_postfix_foreach      => version->new('5.004.05'),
 	);
 
 	# Predefine some indexes needed by various check methods
@@ -113,6 +119,7 @@ BEGIN {
 			open                 => 1,
 			filetest             => 1,
 			charnames            => 1,
+			bytes                => 1,
 		},
 		_perl_5005_pragmas => {
 			re     => 1,
@@ -554,6 +561,13 @@ sub _any_binary_literals {
 	} );	
 }
 
+sub _any_version_literals {
+	shift->Document->find_any( sub {
+		$_[1]->isa('PPI::Token::Number::Version')
+	} );	
+}
+
+
 sub _magic_version {
 	shift->Document->find_any( sub {
 		$_[1]->isa('PPI::Token::Magic')
@@ -596,7 +610,8 @@ sub _perl_5005_modules {
 		and (
 			$_[1]->module eq 'Tie::Array'
 			or
-			($_[1]->module =~ /\bException\b/ and $_[1]->module !~ /^CPAN::/)
+			($_[1]->module =~ /\bException\b/ and
+				$_[1]->module !~ /^(?:CPAN)::/)
 			or
 			$_[1]->module =~ /\bThread\b/
 			or
@@ -671,26 +686,74 @@ sub _three_argument_open {
 		$_[1]->isa('PPI::Statement')  or return '';
 		my @children=$_[1]->children;
 		@children >= 7                or return '';
-		$children[0]->isa('PPI::Token::Word') or return '';
-		$children[0]->content eq 'open'       or return '';
-		my $comma=0;
-		foreach my $n (@children) {
-		  if ($n->isa('PPI::Token::Operator')) {
-		    if ($n->content eq ',') {
-		      $comma++;
-		    } else {
-		      return '';
-		    }
-		  }
+		my $main_element=$children[0];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'open'       or return '';
+		my @arguments = parse_arg_list($main_element);
+		if ( scalar @arguments > 2 ) {
+			return 1;
 		}
-		return '' if $comma<2;
-		return 1;
+		return '';
 	} );
 
 }
 
 
+sub _substr_4_arg {
+	shift->Document->find_any( sub {
+		my $main_element=$_[1];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'substr'       or return '';
+		my @arguments = parse_arg_list($main_element);
+		if ( scalar @arguments > 3 ) {
+			return 1;
+		}
+		return '';
+	} );
+}
 
+sub _postfix_foreach {
+	shift->Document->find_any( sub {
+		my $main_element=$_[1];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'foreach'       or return '';
+		return '' if is_hash_key($main_element);
+		return '' if is_method_call($main_element);
+		return '' if is_subroutine_name($main_element);
+		return '' if is_included_module_name($main_element);
+		return '' if is_package_declaration($main_element);
+		my $stmnt = $main_element->statement();
+		return '' if !$stmnt;
+		return '' if $stmnt->isa('PPI::Statement::Compound');
+		return 1;
+	} );
+}
+
+# weak references require perl 5.6
+# will not work in case of importing several
+sub _weaken {
+	shift->Document->find_any( sub {
+		(
+			$_[1]->isa('PPI::Statement::Include')
+			and
+			$_[1]->module eq 'Scalar::Util'
+			and
+			$_[1]->content =~ /[^:]\b(?:weaken|isweak)\b[^:]/
+		)
+		or
+		(
+			$_[1]->isa('PPI::Token::Word')
+			and
+			(
+				$_[1]->content eq 'Scalar::Util::isweak'
+				or
+				$_[1]->content eq 'Scalar::Util::weaken'
+			)
+			#and
+			#is_function_call($_[1])
+		)
+	} );
+}
 
 
 #####################################################################

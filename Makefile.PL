@@ -1,4 +1,4 @@
-use inc::Module::Install 0.81;
+use inc::Module::Install 0.82;
 
 all_from       'lib/Perl/MinimumVersion.pm';
 
@@ -10,6 +10,7 @@ requires       'Params::Util'           => '0.25';
 requires       'File::Find::Rule'       => '0.30';
 requires       'File::Find::Rule::Perl' => '1.04';
 requires       'PPI'                    => '1.201';
+requires       'Perl::Critic::Utils'    => '1.104';
 test_requires  'File::Spec'             => '0.80';
 test_requires  'Test::More'             => '0.47';
 test_requires  'Test::Script'           => '1.03';

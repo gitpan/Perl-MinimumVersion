@@ -1,5 +1,16 @@
 Revision history for Perl extension Perl-MinimumVersion
 
+1.21 Tue  24 Nov 2009
+        - Add 'bytes' to 5.6 pragma (Alexandr Ciornii)
+        - Add support for "version numbers" like "v1.1.1" (Alexandr Ciornii)
+        - Steal argument counting code from Perl::Critic,
+          reimplement _three_argument_open, more tests (Alexandr Ciornii)
+          Now check for 3-arg open is working.
+        - Check 4-arg substr that requires perl 5.5 (Alexandr Ciornii)
+        - Postfix foreach requires perl 5.004.05 (Alexandr Ciornii)
+        - Scalar::Util::weaken requires perl 5.006 (Alexandr Ciornii)
+        - P::MV itself found imcompatibility in 02_main.t with 5.5 (Alexandr Ciornii)
+
 1.20 Sat  4 Apr 2009
 	- Change 5.005_03 to 5.005.05 (ADAMK)
         - 5.8 and 5.6 pragmas (Alexandr Ciornii)
@@ -13,7 +24,7 @@ Revision history for Perl extension Perl-MinimumVersion
 	- Updating PPI and several other dependencies to get a more
 	  accurate parse on which to run the analysis.
 	- Add a dependency on File::Find::Rule::Perl instead of using
-	  a deplicate (worse) copy of the code for it.
+	  a duplicate (worse) copy of the code for it.
 	- If perlver is run in a CPAN-style distribution don't parse
 	  blib or _build directories (but DO parse inc)
 
