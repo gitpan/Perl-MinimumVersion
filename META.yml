@@ -25,7 +25,7 @@ requires:
   File::Find::Rule: 0.30
   File::Find::Rule::Perl: 1.04
   List::Util: 1.18
-  PPI: 1.201
+  PPI: 1.205
   Params::Util: 0.25
   Perl::Critic::Utils: 1.104
   perl: 5.005
@@ -34,4 +34,4 @@ resources:
   ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Perl-MinimumVersion
   license: http://dev.perl.org/licenses/
   repository: http://svn.ali.as/cpan/trunk/Perl-MinimumVersion
-version: 1.21
+version: 1.22

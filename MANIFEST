@@ -22,6 +22,8 @@ t/03_open_3arg.t
 t/04_substr.t
 t/05_foreach.t
 t/06_weaken.t
+t/07_splice.t
+t/08_mkdir.t
 t/97_meta.t
 t/98_pod.t
 t/99_pmv.t
