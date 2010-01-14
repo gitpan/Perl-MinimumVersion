@@ -10,6 +10,7 @@ inc/Module/Install/Win32.pm
 inc/Module/Install/With.pm
 inc/Module/Install/WriteAll.pm
 lib/Perl/MinimumVersion.pm
+lib/Perl/MinimumVersion/Reason.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files

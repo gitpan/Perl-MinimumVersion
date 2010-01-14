@@ -22,16 +22,16 @@ no_index:
     - inc
     - t
 requires:
-  File::Find::Rule: 0.30
+  File::Find::Rule: 0.32
   File::Find::Rule::Perl: 1.04
   List::Util: 1.18
   PPI: 1.205
   Params::Util: 0.25
   Perl::Critic::Utils: 1.104
-  perl: 5.005
+  perl: 5.6.0
   version: 0.76
 resources:
   ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Perl-MinimumVersion
   license: http://dev.perl.org/licenses/
   repository: http://svn.ali.as/cpan/trunk/Perl-MinimumVersion
-version: 1.22
+version: 1.23_01
