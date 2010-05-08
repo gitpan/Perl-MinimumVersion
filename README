@@ -7,8 +7,8 @@ SYNOPSIS
       $object = Perl::MinimumVersion->new( $filename );
       $object = Perl::MinimumVersion->new( \$source  );
       $object = Perl::MinimumVersion->new( $ppi_document );
-      
-  # Find the minimum version
+
+      # Find the minimum version
       $version = $object->minimum_version;
 
 DESCRIPTION
