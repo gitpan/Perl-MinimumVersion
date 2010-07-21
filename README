@@ -129,6 +129,9 @@ TO DO
 
     Write the recursive module descend stuff
 
+    Check for more 5.12 features (currently only detecting "package NAME
+    VERSION;", "...", and "use feature ':5.12'")
+
 SUPPORT
     All bugs should be filed via the CPAN bug tracker at
 

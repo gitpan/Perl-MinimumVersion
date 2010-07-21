@@ -25,6 +25,9 @@ t/05_foreach.t
 t/06_weaken.t
 t/07_splice.t
 t/08_mkdir.t
-t/97_meta.t
-t/98_pod.t
-t/99_pmv.t
+t/09_pkg_name_version.t
+t/10_yada_yada_yada.t
+t/11_feature_bundle_512.t
+xt/meta.t
+xt/pmv.t
+xt/pod.t
