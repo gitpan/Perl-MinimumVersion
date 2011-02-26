@@ -25,8 +25,8 @@ no_index:
 requires:
   File::Find::Rule: 0.32
   File::Find::Rule::Perl: 1.04
-  List::Util: 1.18
-  PPI: 1.205
+  List::Util: 1.20
+  PPI: 1.215
   Params::Util: 0.25
   Perl::Critic::Utils: 1.104
   perl: 5.6.0
@@ -35,4 +35,4 @@ resources:
   ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Perl-MinimumVersion
   license: http://dev.perl.org/licenses/
   repository: http://svn.ali.as/cpan/trunk/Perl-MinimumVersion
-version: 1.26
+version: 1.27

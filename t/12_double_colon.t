@@ -11,26 +11,24 @@ use Test::More;
 #use version;
 use Perl::MinimumVersion;
 my @examples_not=(
-    q{'foo'.'foo'}, # okay, okay, adding close examples is a TODO
-    q/sub foo {}/,
-    q{1 ... 3}, #sed version of flip-flop
+    q{A::B::C},
+    q{A::B},
 );
 my @examples_yes=(
-    q{...},
-    q{ ... },
-    q{...;},
-    q/if(1){...}/,
-    q/sub foo {...}/,
+    q{A::B::},
+    q{A::},
+    q{new A::B::},
+    q{new A::B:: $c},
 );
 plan tests =>(@examples_not+@examples_yes);
 foreach my $example (@examples_not) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	is( $p->_yada_yada_yada, '', $example )
+	is( $p->_bareword_ends_with_double_colon, '', $example )
 	  or do { diag "\$\@: $@" if $@ };
 }
 foreach my $example (@examples_yes) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	ok( $p->_yada_yada_yada, $example )
+	ok( $p->_bareword_ends_with_double_colon, "$example - detected")
 	  or do { diag "\$\@: $@" if $@ };
 }
 

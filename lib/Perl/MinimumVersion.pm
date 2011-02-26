@@ -54,7 +54,7 @@ use constant REASON => 'Perl::MinimumVersion::Reason';
 
 use vars qw{$VERSION @ISA @EXPORT_OK %CHECKS %MATCHES};
 BEGIN {
-	$VERSION = '1.26';
+	$VERSION = '1.27';
 
 	# Only needed for dev releases, comment out otherwise
 	$VERSION = eval $VERSION;
@@ -104,6 +104,8 @@ BEGIN {
 		_any_INIT_blocks        => version->new('5.005'),
 		_substr_4_arg           => version->new('5.005'),
 		_splice_negative_length => version->new('5.005'),
+		_5005_variables         => version->new('5.005'),
+		_bareword_ends_with_double_colon => version->new('5.005'),
 
 		_postfix_foreach        => version->new('5.004.05'),
 	);
@@ -515,7 +517,12 @@ sub version_markers {
 sub _yada_yada_yada {
 	shift->Document->find_first( sub {
 		$_[1]->isa('PPI::Token::Operator')
-		and $_[1]->content eq '...'
+		and $_[1]->content eq '...'  or return '';
+		my @child = $_[1]->parent->schildren;
+		@child == 1 and return 1;
+		if (@child == 2) {
+			$child[1]->isa('PPI::Token::Structure')
+		}
 	} );
 }
 
@@ -661,11 +668,7 @@ sub _any_our_variables {
 
 sub _any_binary_literals {
 	shift->Document->find_first( sub {
-		$_[1]->isa('PPI::Token::Number')
-		and
-		$_[1]->{_subtype}
-		and
-		$_[1]->{_subtype} eq 'binary'
+		$_[1]->isa('PPI::Token::Number::Binary')
 	} );	
 }
 
@@ -805,10 +808,10 @@ sub _use_carp_version {
 
 sub _three_argument_open {
 	shift->Document->find_first( sub {
-		$_[1]->isa('PPI::Statement')  or return '';
-		my @children=$_[1]->children;
+		$_[1]->isa('PPI::Statement') or return '';
+		my @children = $_[1]->children;
 		#@children >= 7                or return '';
-		my $main_element=$children[0];
+		my $main_element = $children[0];
 		$main_element->isa('PPI::Token::Word') or return '';
 		$main_element->content eq 'open'       or return '';
 		my @arguments = parse_arg_list($main_element);
@@ -818,7 +821,6 @@ sub _three_argument_open {
 		return '';
 	} );
 }
-
 
 sub _substr_4_arg {
 	shift->Document->find_first( sub {
@@ -931,6 +933,22 @@ sub _weaken {
 }
 
 
+sub _5005_variables {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Token::Magic')
+		and
+		($_[1]->content eq '$!' or $_[1]->content eq '$^R')
+	} );
+}
+
+#added in 5.5
+sub _bareword_ends_with_double_colon {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Token::Word')
+		and
+		$_[1]->content =~ /::$/
+	} );
+}
 
 
 
@@ -1026,7 +1044,7 @@ L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright 2005 - 2010 Adam Kennedy.
+Copyright 2005 - 2011 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

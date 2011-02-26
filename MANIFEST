@@ -2,12 +2,12 @@ Changes
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
+inc/Module/Install/DSL.pm
 inc/Module/Install/Fetch.pm
 inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
 inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
-inc/Module/Install/With.pm
 inc/Module/Install/WriteAll.pm
 lib/Perl/MinimumVersion.pm
 lib/Perl/MinimumVersion/Reason.pm
@@ -28,6 +28,7 @@ t/08_mkdir.t
 t/09_pkg_name_version.t
 t/10_yada_yada_yada.t
 t/11_feature_bundle_512.t
+t/12_double_colon.t
 xt/meta.t
 xt/pmv.t
 xt/pod.t
