@@ -29,6 +29,7 @@ t/09_pkg_name_version.t
 t/10_yada_yada_yada.t
 t/11_feature_bundle_512.t
 t/12_double_colon.t
+t/13_perl_510.t
 xt/meta.t
 xt/pmv.t
 xt/pod.t
