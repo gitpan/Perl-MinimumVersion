@@ -3,14 +3,15 @@ abstract: 'Find a minimum required version of perl for Perl code'
 author:
   - 'Adam Kennedy <adamk@cpan.org>'
 build_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.59
   File::Spec: 0.80
   Test::More: 0.47
   Test::Script: 1.03
 configure_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.59
 distribution_type: module
-generated_by: 'Module::Install version 1.00'
+dynamic_config: 0
+generated_by: 'Module::Install version 1.06'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -27,6 +28,7 @@ requires:
   File::Find::Rule::Perl: 1.04
   List::Util: 1.20
   PPI: 1.215
+  PPIx::Regexp: 0.028
   Params::Util: 0.25
   Perl::Critic::Utils: 1.104
   perl: 5.6.0
@@ -35,4 +37,4 @@ resources:
   ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Perl-MinimumVersion
   license: http://dev.perl.org/licenses/
   repository: http://svn.ali.as/cpan/trunk/Perl-MinimumVersion
-version: 1.28
+version: 1.29

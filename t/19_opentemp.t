@@ -8,30 +8,28 @@ BEGIN {
 
 use Test::More;
 
-#use version;
 use Perl::MinimumVersion;
 my @examples_not=(
-    q{'foo'.'foo'}, # okay, okay, adding close examples is a TODO
-    q/sub foo {}/,
-    q{1 ... 3}, #sed version of flip-flop
-    q[grep { /^$newver(?:\s+|$)/ ... /^\S/ }], #RT#59774
+    q'open(my $tmp, "+>", "a") or die;',
+    q'open(my $tmp, undef) or die;',
+    q'$obj->open(my $tmp, ">", undef);',
+	q{open INFO,   "<  datafile"  or print undef, "can't open datafile: ",$!;},
 );
 my @examples_yes=(
-    q{...},
-    q{ ... },
-    q{...;},
-    q/if(1){...}/,
-    q/sub foo {...}/,
+    q'open(my $tmp, "+>", undef) or die;',
+    q'open my $tmp, "+>", undef or die;',
+    q'open my $tmp, "+>", undef;',
 );
 plan tests =>(@examples_not+@examples_yes);
+my $method='_open_temp';
 foreach my $example (@examples_not) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	is( $p->_yada_yada_yada, '', $example )
+	is( $p->$method, '', $example )
 	  or do { diag "\$\@: $@" if $@ };
 }
 foreach my $example (@examples_yes) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	ok( $p->_yada_yada_yada, $example )
+	ok( $p->$method, "$example - detected")
 	  or do { diag "\$\@: $@" if $@ };
 }
 

@@ -27,9 +27,15 @@ t/07_splice.t
 t/08_mkdir.t
 t/09_pkg_name_version.t
 t/10_yada_yada_yada.t
-t/11_feature_bundle_512.t
+t/11_feature_bundle.t
 t/12_double_colon.t
 t/13_perl_510.t
+t/14_regex.t
+t/15_each.t
+t/16_binmode.t
+t/17_when.t
+t/18_exists_subr.t
+t/19_opentemp.t
 xt/meta.t
 xt/pmv.t
 xt/pod.t

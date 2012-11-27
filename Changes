@@ -1,5 +1,20 @@
 Revision history for Perl extension Perl-MinimumVersion
 
+1.29 Tue 27 Nov 2012
+	- "Use of uninitialized value in null operation" fix.
+	- Adding test for "utf8::is_utf" 5.8.1 special case
+	- Recognize all versions in "use feature" bundle (Alexandr Ciornii)
+	- Support regexes (Alexandr Ciornii)
+	- detect changes in each/keys/values in 5.12 and 5.14 (Yasutaka ATARASHI, Alexandr Ciornii)
+	- 2-arg binmode (Alexandr Ciornii)
+	- postfix when (Alexandr Ciornii)
+	- exists(&sub) (Kevin Ryde, Alexandr Ciornii)
+	- _bugfix_magic_errno will return element (Alexandr Ciornii)
+	- add 'encoding' to 5.8 pragmas (Alexandr Ciornii)
+	- private methods _set_checks2skip and _set_collect_all_reasons for
+	  Perl::Critic::Policy::Compatibility::PerlMinimumVersionAndWhy (Alexandr Ciornii)
+	- temp file with open requires 5.8 (Alexandr Ciornii)
+
 1.28 Wed  2 Mar 2011
 	- The ->isa in the 5.10 operator and magic variable tests were
 	  back the front, breaking both. Fixed (ADAMK)

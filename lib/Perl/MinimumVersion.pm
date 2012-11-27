@@ -12,7 +12,7 @@ Perl::MinimumVersion - Find a minimum required version of perl for Perl code
   $object = Perl::MinimumVersion->new( $filename );
   $object = Perl::MinimumVersion->new( \$source  );
   $object = Perl::MinimumVersion->new( $ppi_document );
-  
+
   # Find the minimum version
   $version = $object->minimum_version;
 
@@ -36,10 +36,11 @@ covers it.
 
 use 5.006;
 use strict;
+use warnings;
 use version      ();
 use Carp         ();
 use Exporter     ();
-use List::Util   ();
+use List::Util   qw(max first);
 use Params::Util ('_INSTANCE', '_CLASS');
 use PPI::Util    ('_Document');
 use PPI          ();
@@ -47,12 +48,12 @@ use Perl::Critic::Utils 1.104 qw{
 	:classification
 	:ppi
 };
-
+use PPIx::Regexp;
 use Perl::MinimumVersion::Reason ();
 
-use vars qw{$VERSION @ISA @EXPORT_OK %CHECKS %MATCHES};
+our ($VERSION, @ISA, @EXPORT_OK, %CHECKS, @CHECKS_RV ,%MATCHES);
 BEGIN {
-	$VERSION = '1.28';
+	$VERSION = '1.29';
 
 	# Only needed for dev releases, comment out otherwise
 	# $VERSION = eval $VERSION;
@@ -63,9 +64,9 @@ BEGIN {
 
 	# The primary list of version checks
 	%CHECKS = (
-		_feature_bundle_5_12    => version->new('5.012'),
 		_yada_yada_yada         => version->new('5.012'),
 		_pkg_name_version       => version->new('5.012'),
+		_postfix_when           => version->new('5.012'),
 
 		_perl_5010_pragmas      => version->new('5.010'),
 		_perl_5010_operators    => version->new('5.010'),
@@ -73,12 +74,14 @@ BEGIN {
 
 		# Various small things
 		_bugfix_magic_errno     => version->new('5.008.003'),
+		_is_utf8                => version->new('5.008.001'),
 		_unquoted_versions      => version->new('5.008.001'),
 		_perl_5008_pragmas      => version->new('5.008'),
 		_constant_hash          => version->new('5.008'),
 		_use_base_exporter      => version->new('5.008'),
 		_local_soft_reference   => version->new('5.008'),
 		_use_carp_version       => version->new('5.008'),
+		_open_temp              => version->new('5.008'),
 
 		# Included in 5.6. Broken until 5.8
 		_pragma_utf8            => version->new('5.008'),
@@ -93,6 +96,7 @@ BEGIN {
 		_three_argument_open    => version->new('5.006'),
 		_weaken                 => version->new('5.006'),
 		_mkdir_1_arg            => version->new('5.006'),
+		_exists_subr            => version->new('5.006'),
 
 		_any_qr_tokens          => version->new('5.005.03'),
 		_perl_5005_pragmas      => version->new('5.005'),
@@ -103,9 +107,12 @@ BEGIN {
 		_substr_4_arg           => version->new('5.005'),
 		_splice_negative_length => version->new('5.005'),
 		_5005_variables         => version->new('5.005'),
-		_bareword_ends_with_double_colon => version->new('5.005'),
+		_bareword_double_colon  => version->new('5.005'),
 
 		_postfix_foreach        => version->new('5.004.05'),
+	);
+	@CHECKS_RV = ( #subs that return version
+	    '_feature_bundle','_regex','_each_argument','_binmode_2_arg',
 	);
 
 	# Predefine some indexes needed by various check methods
@@ -127,6 +134,7 @@ BEGIN {
 			threads           => 1,
 			'threads::shared' => 1,
 			sort              => 1,
+			encoding          => 1,
 		},
 		_perl_5006_pragmas => {
 			warnings             => 1, #may be ported into older version
@@ -272,7 +280,7 @@ sub minimum_reason {
 }
 
 sub default_reason {
-	Perl::MinimumVersion->new(
+	Perl::MinimumVersion::Reason->new(
 		rule    => 'default',
 		version => $_[0]->{default},
 		element => undef,
@@ -325,7 +333,7 @@ sub _minimum_explicit_version {
 	my $element = undef;
 	foreach my $include ( @$explicit ) {
 		my $version = version->new($include->version);
-		if ( $version > $max or not $element ) {
+		if ( not $element or $version > $max ) {
 			$max     = $version;
 			$element = $include;
 		}
@@ -379,7 +387,7 @@ sub minimum_syntax_reason {
 		$limit = version->new("$limit");
 	}
 	if ( defined $self->{syntax} ) {
-		if ( $self->{syntax}->version >= $limit ) {
+		if ( !defined($limit) or $self->{syntax}->version >= $limit ) {
 			# Previously discovered minimum is what they want
 			return $self->{syntax};
 		}
@@ -403,9 +411,46 @@ sub minimum_syntax_reason {
 	return '';
 }
 
+#for Perl::Critic::Policy::Compatibility::PerlMinimumVersionAndWhy
+sub _set_checks2skip {
+	my $self = shift;
+	my $list = shift;
+	$self->{_checks2skip} = $list;
+}
+sub _set_collect_all_reasons {
+	my $self = shift;
+	my $value = shift;
+	$value = 1 unless defined $value;
+	$self->{_collect_all_reasons} = $value;
+}
+
 sub _minimum_syntax_version {
 	my $self   = shift;
 	my $filter = shift || $self->{default};
+
+	my %checks2skip;
+	@checks2skip{ @{ $self->{_checks2skip} || [] } } = ();
+
+	my %rv_result;
+	my $current_reason;
+	foreach my $rule ( @CHECKS_RV ) {
+		next if exists $checks2skip{$rule};
+		my ($v, $obj) = $self->$rule();
+		$v = version->new($v);
+		if ( $v > $filter ) {
+			$current_reason = Perl::MinimumVersion::Reason->new(
+				rule    => $rule,
+				version => $v,
+				element => _INSTANCE($obj, 'PPI::Element'),
+			);
+		    if ($self->{_collect_all_reasons}) {
+				push @{ $self->{_all_reasons} }, $current_reason;
+			} else {
+				$filter = $v;
+			}
+	    }
+	}
+
 
 	# Always check in descending version order.
 	# By doing it this way, the version of the first check that matches
@@ -413,22 +458,28 @@ sub _minimum_syntax_version {
 	my @rules = sort {
 		$CHECKS{$b} <=> $CHECKS{$a}
 	} grep {
-		$CHECKS{$_} > $filter
+	    not(exists $checks2skip{$_}) and $CHECKS{$_} > $filter
 	} keys %CHECKS;
 
 	foreach my $rule ( @rules ) {
 		my $result = $self->$rule() or next;
 
 		# Create the result object
-		return Perl::MinimumVersion::Reason->new(
+		my $reason = Perl::MinimumVersion::Reason->new(
 			rule    => $rule,
 			version => $CHECKS{$rule},
 			element => _INSTANCE($result, 'PPI::Element'),
 		);
+		if ($self->{_collect_all_reasons}) {
+			push @{ $self->{_all_reasons} }, $current_reason;
+		} else {
+			return $reason;
+		}
+
 	}
 
 	# Found nothing of interest
-	return '';
+	return $current_reason || '';
 }
 
 =pod
@@ -512,6 +563,196 @@ sub version_markers {
 #####################################################################
 # Version Check Methods
 
+#:5.14 means same as :5.12, but :5.14 is not defined in feature.pm in perl 5.12.
+sub _feature_bundle {
+    my @versions;
+    my ($version, $obj);
+	shift->Document->find( sub {
+		$_[1]->isa('PPI::Statement::Include') or return '';
+		$_[1]->pragma eq 'feature'            or return '';
+		my @child = $_[1]->schildren;
+		my @args = @child[1..$#child]; # skip 'use', 'feature' and ';'
+		foreach my $arg (@args) {
+		    my $v = 0;
+		    $v = $1 if ($arg->content =~ /:(5\.\d+)(?:\.\d+)?/);
+		    $v = max($v, 5.16) if ($arg->content =~ /\barray_base\b/); #defined only in 5.16
+			#
+			if ($v and $v > ($version || 0) ) {
+				$version = $v;
+				$obj = $_[1];
+			}
+		}
+		return '';
+	} );
+	return (defined($version)?"$version.0":undef, $obj);
+}
+
+sub _regex {
+    my @versions;
+    my ($version, $obj);
+	shift->Document->find( sub {
+	    return '' unless
+			grep { $_[1]->isa($_) }
+			qw/PPI::Token::QuoteLike::Regexp PPI::Token::Regexp::Match PPI::Token::Regexp::Substitute/;
+			my $re = PPIx::Regexp->new( $_[1] );
+        	my $v = $re->perl_version_introduced;
+			if ($v and $v > ($version || 0) ) {
+				$version = $v;
+				$obj = $_[1];
+			}
+		return '';
+	} );
+	$version = undef if ($version and $version eq '5.000');
+	return ($version, $obj);
+}
+
+sub _each_argument {
+    my ($version, $obj);
+	shift->Document->find( sub {
+		$_[1]->isa('PPI::Token::Word') or return '';
+		$_[1]->content =~ '^(each|keys|values)$'  or return '';
+		return '' if is_method_call($_[1]);
+		my $next = $_[1]->snext_sibling;
+		$next = $next->schild(0)->schild(0) if $next->isa('PPI::Structure::List');
+		if($next->isa('PPI::Token::Cast')) {
+			if($next->content eq '@' && 5.012 > ($version || 0)) {
+				$version = 5.012;
+				$obj = $_[1]->parent;
+			} elsif($next->content eq '$' && 5.014 > ($version || 0)) {
+				$version = 5.014;
+				$obj = $_[1]->parent;
+			}
+		} elsif($next->isa('PPI::Token::Symbol')) {
+			if($next->raw_type eq '@' && 5.012 > ($version || 0)) {
+				$version = 5.012;
+				$obj = $_[1]->parent;
+			} elsif($next->raw_type eq '$' && 5.014 > ($version || 0)) {
+				$version = 5.014;
+				$obj = $_[1]->parent;
+			}
+		} else { # function call or other should be reference
+			if(5.014 > ($version || 0)) {
+				$version = 5.014;
+				$obj = $_[1]->parent;
+			}
+		}
+		return 1 if ($version and $version == 5.014);
+		return '';
+	} );
+	return (defined($version)?"$version":undef, $obj);
+}
+
+#Is string (first argument) in list (other arguments)
+sub _str_in_list {
+	my $str = shift;
+	foreach my $s (@_) {
+		return 1 if $s eq $str;
+	}
+	return 0;
+}
+
+
+sub _binmode_2_arg {
+    my ($version, $obj);
+	shift->Document->find_first( sub {
+		my $main_element=$_[1];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'binmode'       or return '';
+		return '' if is_hash_key($main_element);
+		return '' if is_method_call($main_element);
+		return '' if is_subroutine_name($main_element);
+		return '' if is_included_module_name($main_element);
+		return '' if is_package_declaration($main_element);
+		my @arguments = parse_arg_list($main_element);
+		if ( scalar @arguments == 2 ) {
+		    my $arg2=$arguments[1][0];
+			if ( $arg2->isa('PPI::Token::Quote')) { #check second argument
+				my $str = $arg2->string;
+				$str =~ s/^\s+//s;
+				$str =~ s/\s+$//s;
+				$str =~ s/:\s+/:/g;
+				if ( !_str_in_list( $str => qw/:raw :crlf/) and $str !~ /[\$\@\%]/) {
+            		$version = 5.008;
+		            $obj = $main_element;
+					return 1;
+				}
+			}
+			if (!$version) {
+        	    $version = 5.006;
+	            $obj = $main_element;
+	        }
+		}
+		return '';
+	} );
+	return ($version, $obj);
+}
+
+
+sub _open_temp {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Statement') or return '';
+		my @children = $_[1]->children;
+		#@children >= 7                or return '';
+		my $main_element = $children[0];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'open'       or return '';
+		my @arguments = parse_arg_list($main_element);
+		if ( scalar @arguments == 3 and scalar(@{$arguments[2]}) == 1) {
+		    my $arg3 = $arguments[2][0];
+		    if ($arg3->isa('PPI::Token::Word') and $arg3->content eq 'undef') {
+				return 1;
+			}
+		}
+		return '';
+	} );
+}
+
+# exists(&subr) new in 5.6.0 #
+sub _exists_subr {
+	my ($pmv) = @_;
+	$pmv->Document->find_first(sub {
+		my ($document, $elem) = @_;
+		if ($elem->isa('PPI::Token::Word')
+			&& $elem eq 'exists'
+			&& is_function_call($elem)
+			&& ($elem = first_arg($elem))
+			&& (_get_resulting_sigil($elem) || '') eq '&') {
+				return 1;
+		} else {
+			return 0;
+		}
+	});
+}
+
+sub _get_resulting_sigil {
+	my $elem = shift;
+	if ($elem->isa('PPI::Token::Cast')) {
+		return $elem->content;
+	} elsif ($elem->isa('PPI::Token::Symbol')) {
+		return $elem->symbol_type;
+	} else {
+		return undef;
+	}
+}
+
+
+sub _postfix_when {
+	shift->Document->find_first( sub {
+		my $main_element=$_[1];
+		$main_element->isa('PPI::Token::Word') or return '';
+		$main_element->content eq 'when'    or return '';
+		return '' if is_hash_key($main_element);
+		return '' if is_method_call($main_element);
+		return '' if is_subroutine_name($main_element);
+		return '' if is_included_module_name($main_element);
+		return '' if is_package_declaration($main_element);
+		my $stmnt = $main_element->statement();
+		return '' if !$stmnt;
+		return '' if $stmnt->isa('PPI::Statement::When');
+		return 1;
+	} );
+}
+
 sub _yada_yada_yada {
 	shift->Document->find_first( sub {
 		$_[1]->isa('PPI::Token::Operator')
@@ -521,19 +762,6 @@ sub _yada_yada_yada {
 		if (@child == 2) {
 			$child[1]->isa('PPI::Token::Structure')
 		}
-	} );
-}
-
-sub _feature_bundle_5_12 {
-	shift->Document->find_first( sub {
-		$_[1]->isa('PPI::Statement::Include') or return '';
-		$_[1]->pragma eq 'feature'            or return '';
-		my @child = $_[1]->schildren;
-		my @args = @child[1..$#child]; # skip 'use', 'feature' and ';'
-		foreach my $arg (@args) {
-			return $arg->content if $arg->content =~ /:5\.12/;
-		}
-		return '';
 	} );
 }
 
@@ -581,19 +809,29 @@ sub _perl_5008_pragmas {
 	} );
 }
 
-# FIXME: Needs to be upgraded to return something
+# 5.8.3: Reading $^E now preserves $!. Previously, the C code implementing $^E did not preserve errno, so reading $^E could cause errno and therefore $! to change unexpectedly.
 sub _bugfix_magic_errno {
 	my $Document = shift->Document;
-	$Document->find_any( sub {
+	my $element = $Document->find_first( sub {
 		$_[1]->isa('PPI::Token::Magic')
 		and
 		$_[1]->symbol eq '$^E'
-	} )
-	and
+	} ) || return undef;
+	#$^E is more rare than $!, so search for it first and return it
 	$Document->find_any( sub {
 		$_[1]->isa('PPI::Token::Magic')
 		and
 		$_[1]->symbol eq '$!'
+	} ) || return '';
+	return $element;
+}
+
+# utf8::is_utf requires 5.8.1 unlike the rest of utf8
+sub _is_utf8 {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Token::Word') or return '';
+		$_[1] eq 'utf8::is_utf'        or return '';
+		return 1;
 	} );
 }
 
@@ -939,7 +1177,7 @@ sub _5005_variables {
 }
 
 #added in 5.5
-sub _bareword_ends_with_double_colon {
+sub _bareword_double_colon {
 	shift->Document->find_first( sub {
 		$_[1]->isa('PPI::Token::Word')
 		and
@@ -1041,7 +1279,7 @@ L<http://ali.as/>, L<PPI>, L<version>
 
 =head1 COPYRIGHT
 
-Copyright 2005 - 2011 Adam Kennedy.
+Copyright 2005 - 2012 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

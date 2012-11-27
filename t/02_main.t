@@ -8,7 +8,7 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More tests => 82;
+use Test::More tests => 119;
 use version;
 use File::Spec::Functions ':ALL';
 use PPI;
@@ -217,6 +217,15 @@ ok( $v->_5005_variables, '->_5005_variables returns true' );
 }
 
 
+# Check $^E + $!
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.008003', '$^E + $!' );
+$! + $^E;
+END_PERL
+is( $v->_bugfix_magic_errno->symbol, '$^E','->_bugfix_magic_errno returns $^E' );
+}
+
+
 
 # Check that minimum_syntax_version's limit param is respected
 SCOPE: {
@@ -252,6 +261,66 @@ use base 'Exporter';
 END_PERL
 }
 
+
+# Check feature bundle
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.12.0', 'use feature :5.12 matches expected version' );
+use feature ':5.12';
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.10.0', 'use feature :5.10 along with older feature' );
+use feature ':5.10';open A,'<','test.txt';
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.12.0', 'use feature :5.10 along with newer feature' );
+use feature ':5.10';
+sub foo { ... };
+END_PERL
+}
+
+# Check regexes
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.005', '\z in regex matches expected version' );
+m/a\z/
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.006.0', '\z along with newer feature' );
+m/a\z/;open A,'<','test.txt';
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.015008', '\F' );
+s/\Fa//;
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.004', '/c regex modifier' );
+s//c;
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.015008', '\F and use feature' );
+use feature ':5.10';
+s/\Fa//;
+END_PERL
+}
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.16.0', '\F and use feature' );
+use feature ':5.16';
+s/\Fa//;
+END_PERL
+}
+
+#check binmode
+SCOPE: {
+my $v = version_is( <<'END_PERL', '5.8.0', '2-arg binmode with utf' );
+binmode($fh, ':utf');
+END_PERL
+}
+
 # test version_markers
 SCOPE: {
 my $perl = <<'END_PERL';
@@ -278,5 +347,34 @@ for my $i (map { $_ * 2 } 0 .. $#result / 2) {
 }
 
 }
+
+#check _checks2skip
+SCOPE: {
+my $doc = PPI::Document->new(\'our $x;s/a//u;$^R;');
+my $minver = Perl::MinimumVersion->new($doc);
+$minver->_set_checks2skip([qw/_any_our_variables _regex/]);
+is(
+  $minver->minimum_syntax_version,
+  '5.005',
+  "5.6 checks not run when _checks2skip was used",
+);
+}
+#check _checks2skip
+SCOPE: {
+my $doc = PPI::Document->new(\'our $x;s/a//u;$^R;');
+my $minver = Perl::MinimumVersion->new($doc);
+$minver->_set_collect_all_reasons();
+is(
+  $minver->minimum_syntax_version,
+  '5.01301',
+  "correct version",
+);
+is(
+  scalar(@{ $minver->{_all_reasons} }),
+  3,
+  "3 checks met",
+);
+}
+
 
 1;

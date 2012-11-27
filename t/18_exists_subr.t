@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
 BEGIN {
@@ -8,29 +8,32 @@ BEGIN {
 
 use Test::More;
 
-#use version;
 use Perl::MinimumVersion;
 my @examples_not=(
-    q{use feature ':5.8'},
-    q{use feature ':5.10'},
-    q{use feature},
-    q{use feature 'say', ':5.10';},
+    q'exists $a{b}',
+    q'exists($a{b})',
+    q'exists $a{f(b)}',
+    q'exists $ref->{A}->{B}',
+    q'exists f->{A}->{B}',
+    q'$obj->exists(&a)',
 );
 my @examples_yes=(
-    q{use feature ':5.8', ':5.12'},
-    q{use feature ':5.12'},
-    q{use feature ':5.12', "say"},
-    q{use feature ':5.12';},
+    q{exists &a},
+    q{exists(&a)},
+    q{exists &$a},
+    q{exists(&$a)},
+    q/exists &{$ref->{A}{B}{$key}}/,
 );
 plan tests =>(@examples_not+@examples_yes);
+my $method='_exists_subr';
 foreach my $example (@examples_not) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	is( $p->_feature_bundle_5_12, '', $example )
+	is( $p->$method, '', $example )
 	  or do { diag "\$\@: $@" if $@ };
 }
 foreach my $example (@examples_yes) {
 	my $p = Perl::MinimumVersion->new(\$example);
-	ok( $p->_feature_bundle_5_12, $example )
+	ok( $p->$method, "$example - detected")
 	  or do { diag "\$\@: $@" if $@ };
 }
 
