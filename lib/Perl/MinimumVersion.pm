@@ -53,7 +53,7 @@ use Perl::MinimumVersion::Reason ();
 
 our ($VERSION, @ISA, @EXPORT_OK, %CHECKS, @CHECKS_RV ,%MATCHES);
 BEGIN {
-	$VERSION = '1.29';
+	$VERSION = '1.30';
 
 	# Only needed for dev releases, comment out otherwise
 	# $VERSION = eval $VERSION;
@@ -630,6 +630,8 @@ sub _each_argument {
 				$version = 5.014;
 				$obj = $_[1]->parent;
 			}
+		} elsif($next->isa('PPI::Token::Operator')) { # % $a
+			return '';
 		} else { # function call or other should be reference
 			if(5.014 > ($version || 0)) {
 				$version = 5.014;
