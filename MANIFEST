@@ -36,6 +36,8 @@ t/16_binmode.t
 t/17_when.t
 t/18_exists_subr.t
 t/19_opentemp.t
+t/20_sort_subref.t
+t/21_openscalar.t
 xt/meta.t
 xt/pmv.t
 xt/pod.t
