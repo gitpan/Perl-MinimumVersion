@@ -1,5 +1,5 @@
 package Perl::MinimumVersion::Reason;
-
+$Perl::MinimumVersion::Reason::VERSION = '1.33';
 # Simple abstraction for a syntax limitation.
 # It contains the limiting version, the rule responsible, and the
 # PPI element responsible for the limitation (if any).
@@ -7,14 +7,6 @@ package Perl::MinimumVersion::Reason;
 use 5.006;
 use strict;
 use warnings;
-
-use vars qw{$VERSION};
-BEGIN {
-	$VERSION = '1.32';
-
-	# Only needed for dev releases, comment out otherwise
-	# $VERSION = eval $VERSION;
-}
 
 sub new {
 	my $class = shift;

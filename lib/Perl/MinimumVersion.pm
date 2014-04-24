@@ -1,5 +1,5 @@
 package Perl::MinimumVersion;
-
+$Perl::MinimumVersion::VERSION = '1.33';
 =pod
 
 =head1 NAME
@@ -37,27 +37,22 @@ covers it.
 use 5.006;
 use strict;
 use warnings;
-use version      ();
-use Carp         ();
-use Exporter     ();
-use List::Util   qw(max first);
-use Params::Util ('_INSTANCE', '_CLASS');
-use PPI::Util    ('_Document');
-use PPI          ();
-use Perl::Critic::Utils 1.104 qw{
+use version             0.76   ();
+use Carp                        ();
+use Exporter                    ();
+use List::Util          1.20    qw(max first);
+use Params::Util        0.25    ('_INSTANCE', '_CLASS');
+use PPI::Util                   ('_Document');
+use PPI                 1.215   ();
+use Perl::Critic::Utils 1.104   qw{
 	:classification
 	:ppi
 };
-use PPIx::Regexp;
+use PPIx::Regexp        0.033;
 use Perl::MinimumVersion::Reason ();
 
-our ($VERSION, @ISA, @EXPORT_OK, %CHECKS, @CHECKS_RV ,%MATCHES);
+our (@ISA, @EXPORT_OK, %CHECKS, @CHECKS_RV ,%MATCHES);
 BEGIN {
-	$VERSION = '1.32';
-
-	# Only needed for dev releases, comment out otherwise
-	# $VERSION = eval $VERSION;
-
 	# Export the PMV convenience constant
 	@ISA       = 'Exporter';
 	@EXPORT_OK = 'PMV';
@@ -67,6 +62,8 @@ BEGIN {
 		_yada_yada_yada         => version->new('5.012'),
 		_pkg_name_version       => version->new('5.012'),
 		_postfix_when           => version->new('5.012'),
+		_perl_5012_pragmas      => version->new('5.012'),
+		_while_readdir          => version->new('5.012'),
 
 		_perl_5010_pragmas      => version->new('5.010'),
 		_perl_5010_operators    => version->new('5.010'),
@@ -83,6 +80,7 @@ BEGIN {
 		_use_carp_version       => version->new('5.008'),
 		_open_temp              => version->new('5.008'),
 		_open_scalar            => version->new('5.008'),
+		_internals_svreadonly   => version->new('5.008'),
 
 		# Included in 5.6. Broken until 5.8
 		_pragma_utf8            => version->new('5.008'),
@@ -119,6 +117,9 @@ BEGIN {
 
 	# Predefine some indexes needed by various check methods
 	%MATCHES = (
+		_perl_5012_pragmas => {
+			deprecate => 1,
+		},
 		_perl_5010_pragmas => {
 			mro     => 1,
 			feature => 1,
@@ -565,6 +566,20 @@ sub version_markers {
 #####################################################################
 # Version Check Methods
 
+my %feature =
+(
+    'state'             => '5.10',
+    'switch'            => '5.10',
+    'unicode_strings'   => '5.14',
+    'unicode_eval'      => '5.16',
+    'evalbytes'         => '5.16',
+    'current_sub'       => '5.16',
+    'array_base'        => '5.16', #defined only in 5.16
+    'fc'                => '5.16',
+    'lexical_subs'      => '5.18',
+);
+my $feature_regexp = join('|', keys %feature);
+
 #:5.14 means same as :5.12, but :5.14 is not defined in feature.pm in perl 5.12.
 sub _feature_bundle {
     my @versions;
@@ -577,7 +592,7 @@ sub _feature_bundle {
 		foreach my $arg (@args) {
 		    my $v = 0;
 		    $v = $1 if ($arg->content =~ /:(5\.\d+)(?:\.\d+)?/);
-		    $v = max($v, 5.16) if ($arg->content =~ /\barray_base\b/); #defined only in 5.16
+		    $v = max($v, $feature{$1}) if ($arg->content =~ /\b($feature_regexp)\b/);
 			#
 			if ($v and $v > ($version || 0) ) {
 				$version = $v;
@@ -693,6 +708,45 @@ sub _binmode_2_arg {
 	return ($version, $obj);
 }
 
+
+
+#http://perldoc.perl.org/functions/readdir.html
+#while(readdir $dh) requires perl 5.12
+sub _while_readdir {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Token::Word') or return '';
+		$_[1]->content eq 'while' or return '';
+		return '' if is_hash_key($_[1]);
+		return '' if is_method_call($_[1]);
+		my $e1 = $_[1]->next_sibling or return '';
+		if ($e1->isa('PPI::Structure::Condition')) { #while ()
+			my @children = $e1->children;
+			$e1 = $children[0];
+		}
+		$e1->isa('PPI::Statement::Expression') or return '';
+		my @children = $e1->schildren;
+	    $e1 = $children[0];
+
+		$e1->isa('PPI::Token::Word') or return '';
+		$e1->content eq 'readdir' or return '';
+		return 1 if @children == 1; #incorrect call
+		return '' if @children > 2; #not only readdir
+		$e1 = $children[1];
+		$e1->isa('PPI::Structure::List') or $e1->isa('PPI::Token::Symbol') or return '';
+		#readdir($dh) or readdir $dh
+
+		return 1;
+	} );
+}
+
+sub _perl_5012_pragmas {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Statement::Include')
+		and
+		$MATCHES{_perl_5012_pragmas}->{$_[1]->pragma}
+	} );
+}
+
 sub _sort_subref {
 	shift->Document->find_first( sub {
 		$_[1]->isa('PPI::Token::Word') or return '';
@@ -804,6 +858,14 @@ sub _yada_yada_yada {
 		if (@child == 2) {
 			$child[1]->isa('PPI::Token::Structure')
 		}
+	} );
+}
+
+sub _internals_svreadonly {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Statement')
+        and ($_[1]->children)[0]->isa('PPI::Token::Word')
+        and ($_[1]->children)[0]->content eq 'Internals::SvREADONLY'
 	} );
 }
 
@@ -1300,6 +1362,8 @@ B<Write the explicit version checker>
 
 B<Write the recursive module descend stuff>
 
+_while_readdir for postfix while without brackets
+
 B<Check for more 5.12 features (currently only detecting
 C<package NAME VERSION;>, C<...>, and C<use feature ':5.12'>)>
 
@@ -1319,9 +1383,13 @@ Adam Kennedy E<lt>adamk@cpan.orgE<gt>
 
 L<http://ali.as/>, L<PPI>, L<version>
 
+=head1 REPOSITORY
+
+L<https://github.com/neilbowers/Perl-MinimumVersion>
+
 =head1 COPYRIGHT
 
-Copyright 2005 - 2013 Adam Kennedy.
+Copyright 2005 - 2014 Adam Kennedy.
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
