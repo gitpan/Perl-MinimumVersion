@@ -18,6 +18,10 @@ name: Perl-MinimumVersion
 requires:
   Carp: '0'
   Exporter: '0'
+  File::Find::Rule: '0'
+  File::Find::Rule::Perl: '0'
+  File::Spec: '0'
+  Getopt::Long: '0'
   List::Util: '1.20'
   PPI: '1.215'
   PPI::Util: '0'
@@ -26,9 +30,10 @@ requires:
   Perl::Critic::Utils: '1.104'
   perl: '5.006'
   strict: '0'
+  vars: '0'
   version: '0.76'
   warnings: '0'
 resources:
   homepage: https://github.com/neilbowers/Perl-MinimumVersion
   repository: https://github.com/neilbowers/Perl-MinimumVersion.git
-version: '1.33'
+version: '1.34'

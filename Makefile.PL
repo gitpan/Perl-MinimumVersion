@@ -17,12 +17,18 @@ my %WriteMakefileArgs = (
     "ExtUtils::MakeMaker" => "6.30"
   },
   "DISTNAME" => "Perl-MinimumVersion",
-  "EXE_FILES" => [],
+  "EXE_FILES" => [
+    "script/perlver"
+  ],
   "LICENSE" => "perl",
   "NAME" => "Perl::MinimumVersion",
   "PREREQ_PM" => {
     "Carp" => 0,
     "Exporter" => 0,
+    "File::Find::Rule" => 0,
+    "File::Find::Rule::Perl" => 0,
+    "File::Spec" => 0,
+    "Getopt::Long" => 0,
     "List::Util" => "1.20",
     "PPI" => "1.215",
     "PPI::Util" => 0,
@@ -30,6 +36,7 @@ my %WriteMakefileArgs = (
     "Params::Util" => "0.25",
     "Perl::Critic::Utils" => "1.104",
     "strict" => 0,
+    "vars" => 0,
     "version" => "0.76",
     "warnings" => 0
   },
@@ -38,7 +45,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.47",
     "Test::Script" => "1.03"
   },
-  "VERSION" => "1.33",
+  "VERSION" => "1.34",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -48,7 +55,11 @@ my %WriteMakefileArgs = (
 my %FallbackPrereqs = (
   "Carp" => 0,
   "Exporter" => 0,
+  "File::Find::Rule" => 0,
+  "File::Find::Rule::Perl" => 0,
+  "File::Spec" => 0,
   "File::Spec::Functions" => 0,
+  "Getopt::Long" => 0,
   "List::Util" => "1.20",
   "PPI" => "1.215",
   "PPI::Util" => 0,
@@ -58,6 +69,7 @@ my %FallbackPrereqs = (
   "Test::More" => "0.47",
   "Test::Script" => "1.03",
   "strict" => 0,
+  "vars" => 0,
   "version" => "0.76",
   "warnings" => 0
 );
