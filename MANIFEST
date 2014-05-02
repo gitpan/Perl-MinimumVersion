@@ -32,3 +32,4 @@ t/20_sort_subref.t
 t/21_openscalar.t
 t/22_while_readdir.t
 t/23_internals.t
+t/24_state.t

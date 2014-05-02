@@ -8,7 +8,7 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More 0.47 tests => 119;
+use Test::More 0.47 tests => 116;
 use version 0.76;
 use File::Spec::Functions ':ALL';
 use PPI 1.215;
@@ -253,14 +253,6 @@ is(
 );
 }
 
-# Check the use of constant hashes
-SCOPE: {
-my $v = version_is( <<'END_PERL', '5.008', 'use base "Exporter" is a 5.008 dep' );
-use base 'Exporter';
-1;
-END_PERL
-}
-
 
 # Check feature bundle
 SCOPE: {
@@ -366,7 +358,7 @@ my $minver = Perl::MinimumVersion->new($doc);
 $minver->_set_collect_all_reasons();
 like(
   $minver->minimum_syntax_version,
-  qr/^5\.01301/,
+  qr/^5\.013010?$/,
   "correct version",
 );
 is(

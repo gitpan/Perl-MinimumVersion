@@ -1,5 +1,5 @@
 package Perl::MinimumVersion;
-$Perl::MinimumVersion::VERSION = '1.34';
+$Perl::MinimumVersion::VERSION = '1.35';
 =pod
 
 =head1 NAME
@@ -68,6 +68,7 @@ BEGIN {
 		_perl_5010_pragmas      => version->new('5.010'),
 		_perl_5010_operators    => version->new('5.010'),
 		_perl_5010_magic        => version->new('5.010'),
+		_state_declaration      => version->new('5.010'),
 
 		# Various small things
 		_bugfix_magic_errno     => version->new('5.008.003'),
@@ -75,7 +76,6 @@ BEGIN {
 		_unquoted_versions      => version->new('5.008.001'),
 		_perl_5008_pragmas      => version->new('5.008'),
 		_constant_hash          => version->new('5.008'),
-		_use_base_exporter      => version->new('5.008'),
 		_local_soft_reference   => version->new('5.008'),
 		_use_carp_version       => version->new('5.008'),
 		_open_temp              => version->new('5.008'),
@@ -861,6 +861,14 @@ sub _yada_yada_yada {
 	} );
 }
 
+sub _state_declaration {
+	shift->Document->find_first( sub {
+		$_[1]->isa('PPI::Statement::Variable')
+        and ($_[1]->children)[0]->isa('PPI::Token::Word')
+        and ($_[1]->children)[0]->content eq 'state'
+	} );
+}
+
 sub _internals_svreadonly {
 	shift->Document->find_first( sub {
 		$_[1]->isa('PPI::Statement')
@@ -1092,19 +1100,6 @@ sub _any_INIT_blocks {
 		$_[1]->isa('PPI::Statement::Scheduled')
 		and
 		$_[1]->type eq 'INIT'
-	} );
-}
-
-# use base 'Exporter' doesn't work reliably everywhere until 5.008
-sub _use_base_exporter {
-	shift->Document->find_first( sub {
-		$_[1]->isa('PPI::Statement::Include')
-		and
-		$_[1]->module eq 'base'
-		and
-		# Add the "not colon" characters to avoid accidentally
-		# colliding with any other Exporter-named modules
-		$_[1]->content =~ /[^:]\bExporter\b[^:]/
 	} );
 }
 
