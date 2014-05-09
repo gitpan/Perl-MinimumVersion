@@ -1,5 +1,5 @@
 package Perl::MinimumVersion::Reason;
-$Perl::MinimumVersion::Reason::VERSION = '1.35';
+$Perl::MinimumVersion::Reason::VERSION = '1.36';
 # Simple abstraction for a syntax limitation.
 # It contains the limiting version, the rule responsible, and the
 # PPI element responsible for the limitation (if any).
