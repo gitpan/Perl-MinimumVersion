@@ -36,4 +36,4 @@ requires:
 resources:
   homepage: https://github.com/neilbowers/Perl-MinimumVersion
   repository: https://github.com/neilbowers/Perl-MinimumVersion.git
-version: '1.36'
+version: '1.37'
