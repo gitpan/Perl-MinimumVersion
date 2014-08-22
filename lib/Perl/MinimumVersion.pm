@@ -1,5 +1,5 @@
 package Perl::MinimumVersion;
-$Perl::MinimumVersion::VERSION = '1.37';
+$Perl::MinimumVersion::VERSION = '1.38';
 =pod
 
 =head1 NAME
@@ -29,6 +29,13 @@ Future plans are to also add support for tracing module dependencies.
 
 Using C<Perl::MinimumVersion> is dead simple, the synopsis pretty much
 covers it.
+
+The distribution comes with a script called L<perlver>,
+which is the easiest way to run C<Perl::MinimumVersion> on your code:
+
+ % perlver lib/Foo/Bar.pm
+
+See the L<documentation for perlver|perlver> for more details.
 
 =head1 METHODS
 
@@ -1423,6 +1430,12 @@ For other issues, or commercial enhancement or support, contact the author.
 Adam Kennedy E<lt>adamk@cpan.orgE<gt>
 
 =head1 SEE ALSO
+
+L<perlver> - the command-line script for running C<Perl::MinimumVersion>
+on your code.
+
+L<Perl::MinimumVersion::Fast> - another module which does the same thing.
+It's a lot faster, but only supports Perl 5.8.1+.
 
 L<http://ali.as/>, L<PPI>, L<version>
 

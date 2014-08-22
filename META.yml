@@ -7,9 +7,9 @@ build_requires:
   Test::More: '0.47'
   Test::Script: '1.03'
 configure_requires:
-  ExtUtils::MakeMaker: '6.30'
+  ExtUtils::MakeMaker: '0'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 5.016, CPAN::Meta::Converter version 2.133380'
+generated_by: 'Dist::Zilla version 5.020, CPAN::Meta::Converter version 2.141170'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -36,4 +36,4 @@ requires:
 resources:
   homepage: https://github.com/neilbowers/Perl-MinimumVersion
   repository: https://github.com/neilbowers/Perl-MinimumVersion.git
-version: '1.37'
+version: '1.38'
